@@ -1,0 +1,307 @@
+import { query, queryOne } from '../db/client';
+import { AgentTokenPayload, CartItem, MerchantPolicies, PolicyResult, Agent } from '../types';
+
+// ================================================================
+// AISLE Policy Engine — 8-Rule Safety Enforcer
+// Every checkout runs through this BEFORE any Razorpay call.
+// ================================================================
+
+interface PolicyEngineInput {
+  cartItems: CartItem[];
+  cartTotal: number;
+  agent: AgentTokenPayload;
+  merchantId: string;
+  merchantPolicies: MerchantPolicies;
+  merchantAiBuyersEnabled: boolean;
+}
+
+export class PolicyEngine {
+  private rules_passed: string[] = [];
+  private rules_failed: string[] = [];
+  private warnings: string[] = [];
+  private requires_human_review = false;
+  private block_reason: string | null = null;
+  private suggested_action: string | undefined;
+
+  async evaluate(input: PolicyEngineInput): Promise<PolicyResult> {
+    const {
+      cartItems,
+      cartTotal,
+      agent,
+      merchantId,
+      merchantPolicies,
+      merchantAiBuyersEnabled,
+    } = input;
+
+    // Reset state for fresh evaluation
+    this.rules_passed = [];
+    this.rules_failed = [];
+    this.warnings = [];
+    this.requires_human_review = false;
+    this.block_reason = null;
+
+    // --- Rule 1: AIT Validity ---
+    await this.checkAITValidity(agent.agent_id);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 2: Spending Limit (Session) ---
+    this.checkSessionLimit(cartTotal, agent.spending_limit_per_session_inr);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 3: Spending Limit (Daily) ---
+    await this.checkDailyLimit(agent.agent_id, cartTotal, agent.spending_limit_per_day_inr);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 4: Category Policy ---
+    this.checkCategoryPolicy(cartItems, agent.allowed_categories);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 5: Merchant AI Policy ---
+    this.checkMerchantAIPolicy(merchantAiBuyersEnabled);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 6: Human Review Threshold (soft — doesn't block) ---
+    this.checkHumanReviewThreshold(
+      cartTotal,
+      merchantPolicies.human_review_above,
+      agent.requires_human_confirm_above
+    );
+
+    // --- Rule 7: Inventory Check ---
+    await this.checkInventory(cartItems, merchantId);
+    if (this.block_reason) return this.buildResult(8);
+
+    // --- Rule 8: Merchant Daily GMV Cap ---
+    await this.checkMerchantGMVCap(merchantId, cartTotal, merchantPolicies.daily_ai_gmv_cap);
+
+    return this.buildResult(8);
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 1: AIT Validity — check DB for revocation (already checked
+  // in auth middleware, but re-checked here for defense in depth)
+  // ----------------------------------------------------------------
+  private async checkAITValidity(agentId: string): Promise<void> {
+    const agent = await queryOne<Agent>(
+      'SELECT revoked FROM agents WHERE id = $1',
+      [agentId]
+    );
+    if (!agent || agent.revoked) {
+      this.fail('AIT_VALIDITY', 'Agent token is revoked or agent not found', 'Re-issue a valid AIT');
+    } else {
+      this.pass('AIT_VALIDITY');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 2: Session Spending Limit
+  // ----------------------------------------------------------------
+  private checkSessionLimit(cartTotal: number, limitInr: number): void {
+    if (cartTotal > limitInr) {
+      this.fail(
+        'SPENDING_LIMIT_SESSION',
+        `Cart value ₹${cartTotal} exceeds agent session limit of ₹${limitInr}`,
+        `Reduce cart or request higher limit from token issuer`
+      );
+    } else {
+      this.pass('SPENDING_LIMIT_SESSION');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 3: Daily Spending Limit
+  // ----------------------------------------------------------------
+  private async checkDailyLimit(
+    agentId: string,
+    cartTotal: number,
+    dailyLimitInr: number
+  ): Promise<void> {
+    const agent = await queryOne<Agent>(
+      'SELECT daily_spend_inr, daily_spend_reset FROM agents WHERE id = $1',
+      [agentId]
+    );
+
+    if (!agent) {
+      this.fail('SPENDING_LIMIT_DAILY', 'Agent not found');
+      return;
+    }
+
+    // Reset daily spend if it's a new day
+    const resetDate = new Date(agent.daily_spend_reset);
+    const now = new Date();
+    let currentDailySpend = agent.daily_spend_inr;
+
+    if (resetDate.toDateString() !== now.toDateString()) {
+      currentDailySpend = 0; // New day — effectively reset
+    }
+
+    if (currentDailySpend + cartTotal > dailyLimitInr) {
+      const remaining = Math.max(0, dailyLimitInr - currentDailySpend);
+      this.fail(
+        'SPENDING_LIMIT_DAILY',
+        `Cart value ₹${cartTotal} would exceed daily limit. Already spent: ₹${currentDailySpend}, Limit: ₹${dailyLimitInr}, Remaining: ₹${remaining}`,
+        'Wait until tomorrow or request a higher daily limit'
+      );
+    } else {
+      this.pass('SPENDING_LIMIT_DAILY');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 4: Category Policy
+  // ----------------------------------------------------------------
+  private checkCategoryPolicy(cartItems: CartItem[], allowedCategories: string[]): void {
+    if (allowedCategories.includes('*')) {
+      this.pass('CATEGORY_POLICY');
+      return;
+    }
+
+    const violations: string[] = [];
+    for (const item of cartItems) {
+      const hasAllowed = item.categories.some((cat) =>
+        allowedCategories.includes(cat)
+      );
+      if (!hasAllowed) {
+        violations.push(`${item.sku} (categories: ${item.categories.join(', ')})`);
+      }
+    }
+
+    if (violations.length > 0) {
+      this.fail(
+        'CATEGORY_POLICY',
+        `Items not in allowed categories [${allowedCategories.join(', ')}]: ${violations.join('; ')}`,
+        'Request an AIT with broader category permissions'
+      );
+    } else {
+      this.pass('CATEGORY_POLICY');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 5: Merchant AI Policy
+  // ----------------------------------------------------------------
+  private checkMerchantAIPolicy(aiEnabled: boolean): void {
+    if (!aiEnabled) {
+      this.fail(
+        'MERCHANT_AI_POLICY',
+        'This store has disabled AI buyers',
+        'Choose a different store or contact the merchant'
+      );
+    } else {
+      this.pass('MERCHANT_AI_POLICY');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 6: Human Review Threshold (soft — not a hard block)
+  // ----------------------------------------------------------------
+  private checkHumanReviewThreshold(
+    cartTotal: number,
+    merchantThreshold?: number,
+    agentThreshold?: number
+  ): void {
+    const exceeded =
+      (merchantThreshold !== undefined && cartTotal > merchantThreshold) ||
+      (agentThreshold !== undefined && cartTotal > agentThreshold);
+
+    if (exceeded) {
+      this.requires_human_review = true;
+      this.warnings.push(
+        `Order ₹${cartTotal} exceeds review threshold. Merchant approval required before payment.`
+      );
+    }
+    this.pass('HUMAN_REVIEW_THRESHOLD');
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 7: Inventory Check (re-check at checkout time)
+  // ----------------------------------------------------------------
+  private async checkInventory(cartItems: CartItem[], merchantId: string): Promise<void> {
+    const outOfStock: string[] = [];
+
+    for (const item of cartItems) {
+      const product = await queryOne<{ in_stock: boolean }>(
+        'SELECT in_stock FROM products WHERE sku = $1 AND merchant_id = $2',
+        [item.sku, merchantId]
+      );
+      if (!product || !product.in_stock) {
+        outOfStock.push(item.sku);
+      }
+    }
+
+    if (outOfStock.length > 0) {
+      this.fail(
+        'INVENTORY_CHECK',
+        `Items out of stock: ${outOfStock.join(', ')}`,
+        'Remove out-of-stock items from cart and retry'
+      );
+    } else {
+      this.pass('INVENTORY_CHECK');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 8: Merchant Daily AI GMV Cap
+  // ----------------------------------------------------------------
+  private async checkMerchantGMVCap(
+    merchantId: string,
+    cartTotal: number,
+    gmvCapInr?: number
+  ): Promise<void> {
+    if (!gmvCapInr) {
+      this.pass('MERCHANT_GMV_CAP');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const result = await queryOne<{ total: string }>(
+      `SELECT COALESCE(SUM(amount_inr), 0) as total
+       FROM orders
+       WHERE merchant_id = $1
+         AND status IN ('PAID', 'CREATED', 'PENDING_REVIEW')
+         AND DATE(created_at) = $2`,
+      [merchantId, today]
+    );
+
+    const todayGMV = parseInt(result?.total ?? '0', 10);
+
+    if (todayGMV + cartTotal > gmvCapInr) {
+      this.fail(
+        'MERCHANT_GMV_CAP',
+        `Merchant's daily AI GMV cap of ₹${gmvCapInr} would be exceeded (current: ₹${todayGMV})`,
+        'Try again tomorrow or contact the merchant to raise the cap'
+      );
+    } else {
+      this.pass('MERCHANT_GMV_CAP');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Helpers
+  // ----------------------------------------------------------------
+  private pass(rule: string): void {
+    this.rules_passed.push(rule);
+  }
+
+  private fail(rule: string, detail: string, suggested_action?: string): void {
+    this.rules_failed.push(rule);
+    this.block_reason = detail;
+    this.suggested_action = suggested_action;
+  }
+
+  private buildResult(totalRules: number): PolicyResult {
+    const approved = this.rules_failed.length === 0;
+    return {
+      approved,
+      requires_human_review: approved ? this.requires_human_review : false,
+      rules_evaluated: totalRules,
+      rules_passed: this.rules_passed,
+      rules_failed: this.rules_failed,
+      block_reason: this.block_reason,
+      suggested_action: this.suggested_action,
+      warnings: this.warnings,
+    };
+  }
+}
+
+export const policyEngine = new PolicyEngine();
