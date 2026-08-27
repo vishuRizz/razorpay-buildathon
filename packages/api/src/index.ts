@@ -13,6 +13,7 @@ import storesRouter from './routes/stores';
 import catalogRouter from './routes/catalog';
 import cartRouter from './routes/cart';
 import checkoutRouter from './routes/checkout';
+import simulateRouter from './routes/simulate';
 
 const app: Application = express();
 const PORT = process.env.PORT ?? 3001;
@@ -54,6 +55,12 @@ app.use('/v1/stores/:storeId/catalog', catalogRouter);
 // Cart + Checkout routes (nested under stores)
 app.use('/v1/stores/:storeId/cart', cartRouter);
 app.use('/v1/stores/:storeId', checkoutRouter);
+
+// Simulate endpoint (dashboard demo trigger)
+app.use('/v1/simulate', simulateRouter);
+
+// Serve landing page at root
+app.use(express.static(path.join(__dirname, '../../landing')));
 
 // ─── 404 Handler ─────────────────────────────────────────────
 app.use((_req, res) => {

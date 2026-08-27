@@ -5,6 +5,7 @@ import LiveFeed from './pages/LiveFeed';
 import PolicyEditor from './pages/PolicyEditor';
 import AuditLog from './pages/AuditLog';
 import Analytics from './pages/Analytics';
+import SimulatePanel from './pages/SimulatePanel';
 
 // ── Global store context ──────────────────────────────────────
 interface AppContextType {
@@ -24,7 +25,6 @@ const AppContext = createContext<AppContextType>({
 export const useApp = () => useContext(AppContext);
 
 export default function App() {
-  // In a real app this would come from auth. For demo, enter merchant ID in sidebar.
   const [merchantId, setMerchantId] = useState(
     localStorage.getItem('aisle_merchant_id') ?? ''
   );
@@ -44,6 +44,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/live" replace />} />
               <Route path="/live" element={<LiveFeed />} />
+              <Route path="/simulate" element={<SimulatePanel />} />
               <Route path="/policy" element={<PolicyEditor />} />
               <Route path="/logs" element={<AuditLog />} />
               <Route path="/analytics" element={<Analytics />} />

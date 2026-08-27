@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Zap, ShieldCheck, ScrollText, BarChart3,
-  ChevronRight, Radio, Cpu
+  ChevronRight, Radio, Cpu, Play
 } from 'lucide-react';
 import { useApp } from '../App';
 
 const NAV = [
   { path: '/live',     icon: Zap,         label: 'Live Feed',      shortLabel: 'LIVE' },
+  { path: '/simulate', icon: Play,         label: 'Demo Runner',    shortLabel: 'DEMO' },
   { path: '/policy',  icon: ShieldCheck,  label: 'Policy Engine',  shortLabel: 'POLICY' },
   { path: '/logs',    icon: ScrollText,   label: 'Audit Log',      shortLabel: 'AUDIT' },
   { path: '/analytics', icon: BarChart3,  label: 'Analytics',      shortLabel: 'STATS' },
