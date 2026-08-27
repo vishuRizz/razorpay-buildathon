@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { Product, AgentConstraints } from '../types';
 
 // ================================================================
@@ -7,11 +7,14 @@ import { Product, AgentConstraints } from '../types';
 
 const FALLBACK = 'Reasoning trace unavailable.';
 
-let client: Anthropic | null = null;
+let client: OpenAI | null = null;
 
-function getClient(): Anthropic {
+function getClient(): OpenAI {
   if (!client) {
-    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    client = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+    });
   }
   return client;
 }
@@ -58,20 +61,19 @@ Agent constraints: ${JSON.stringify(agentConstraints, null, 2)}
 Write only the 2-3 sentence explanation. No preamble.`;
 
   try {
-    const anthropic = getClient();
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+    const groq = getClient();
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text =
-      response.content[0]?.type === 'text' ? response.content[0].text.trim() : FALLBACK;
+    const text = response.choices[0]?.message?.content?.trim() || FALLBACK;
 
     console.log(`[REASONING] Trace generated (${Date.now() - start}ms)`);
     return text;
   } catch (err) {
-    console.error('[REASONING] Claude API error — returning fallback:', err);
+    console.error('[REASONING] Groq API error — returning fallback:', err);
     return FALLBACK;
   }
 }
@@ -86,9 +88,9 @@ export async function generateBlockTrace(
   rule: string
 ): Promise<string> {
   try {
-    const anthropic = getClient();
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+    const groq = getClient();
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
       max_tokens: 150,
       messages: [
         {
@@ -102,9 +104,7 @@ Write only the explanation sentence.`,
       ],
     });
 
-    return response.content[0]?.type === 'text'
-      ? response.content[0].text.trim()
-      : `Agent blocked: ${blockReason}`;
+    return response.choices[0]?.message?.content?.trim() || `Agent blocked: ${blockReason}`;
   } catch {
     return `Agent blocked by policy rule ${rule}: ${blockReason}`;
   }
