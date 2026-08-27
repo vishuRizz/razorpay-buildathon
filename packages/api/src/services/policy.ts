@@ -40,8 +40,8 @@ export class PolicyEngine {
     this.requires_human_review = false;
     this.block_reason = null;
 
-    // --- Rule 1: AIT Validity ---
-    await this.checkAITValidity(agent.agent_id);
+    // --- Rule 1: AIT Validity & Reputation ---
+    await this.checkAITValidityAndReputation(agent.agent_id);
     if (this.block_reason) return this.buildResult(8);
 
     // --- Rule 2: Spending Limit (Session) ---
@@ -78,19 +78,24 @@ export class PolicyEngine {
   }
 
   // ----------------------------------------------------------------
-  // Rule 1: AIT Validity — check DB for revocation (already checked
-  // in auth middleware, but re-checked here for defense in depth)
+  // Rule 1: AIT Validity & Reputation
   // ----------------------------------------------------------------
-  private async checkAITValidity(agentId: string): Promise<void> {
+  private async checkAITValidityAndReputation(agentId: string): Promise<void> {
     const agent = await queryOne<Agent>(
-      'SELECT revoked FROM agents WHERE id = $1',
+      'SELECT revoked, reputation_score FROM agents WHERE id = $1',
       [agentId]
     );
     if (!agent || agent.revoked) {
       this.fail('AIT_VALIDITY', 'Agent token is revoked or agent not found', 'Re-issue a valid AIT');
-    } else {
-      this.pass('AIT_VALIDITY');
+      return;
+    } 
+    this.pass('AIT_VALIDITY');
+
+    if (agent.reputation_score < 30) {
+      this.fail('AGENT_REPUTATION', `Agent reputation score too low (${agent.reputation_score}/100)`, 'Improve agent behavior score');
+      return;
     }
+    this.pass('AGENT_REPUTATION');
   }
 
   // ----------------------------------------------------------------

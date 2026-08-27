@@ -44,6 +44,7 @@ export interface Agent {
   owner_email: string;
   constraints: AgentConstraints;
   revoked: boolean;
+  reputation_score: number;
   daily_spend_inr: number;
   daily_spend_reset: string;
   created_at: string;
@@ -66,6 +67,7 @@ export interface AgentTokenPayload {
   allowed_store_ids: string[];
   allowed_categories: string[];
   requires_human_confirm_above?: number;
+  reputation_score?: number;
   issued_at: number;
   expires_at: number;
 }

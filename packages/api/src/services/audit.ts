@@ -44,6 +44,24 @@ export async function logAudit(entry: LogInput): Promise<string> {
         entry.error ?? null,
       ]
     );
+
+    // ── Update Agent Reputation ──
+    if (entry.agent_id) {
+      let repDelta = 0;
+      if (entry.action === 'CHECKOUT_SUCCESS') repDelta = 5;
+      else if (entry.action === 'HUMAN_REVIEW_REQUESTED') repDelta = -10;
+      else if (entry.action === 'POLICY_BLOCK') repDelta = -20;
+
+      if (repDelta !== 0) {
+        // Reputation is capped between 0 and 100
+        await dbQuery(
+          `UPDATE agents 
+           SET reputation_score = GREATEST(0, LEAST(100, reputation_score + $1))
+           WHERE id = $2`,
+          [repDelta, entry.agent_id]
+        );
+      }
+    }
   } catch (err) {
     // Log to console but never propagate — audit failure must not break commerce
     console.error('[AUDIT] Failed to write audit log entry:', err);

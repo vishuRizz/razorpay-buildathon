@@ -7,6 +7,7 @@ import {
   Zap, Pause, Play, RefreshCw, ShoppingCart, Search,
   CheckCircle2, XCircle, Clock, Activity
 } from 'lucide-react';
+import NetworkGraph from '../components/NetworkGraph';
 
 interface LogEntry {
   id: string;
@@ -176,7 +177,10 @@ export default function LiveFeed() {
         </div>
       </div>
 
-      {/* Error */}
+      {/* Network Graph */}
+      <NetworkGraph logs={logs} merchantId={merchantId} />
+
+      {/* Main Content */}
       {error && (
         <div className="mx-6 mt-3 p-2.5 bg-status-blocked/8 border border-status-blocked/20 rounded text-status-blocked text-xs font-mono flex items-center gap-2">
           <XCircle size={12} />
