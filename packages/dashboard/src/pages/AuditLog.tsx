@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useApp } from '../App';
 import StatusBadge from '../components/StatusBadge';
 import AuditDrawer from '../components/AuditDrawer';
+import { ScrollText, Download, Filter, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
 
 interface LogEntry {
   id: string;
@@ -18,9 +20,12 @@ interface LogEntry {
 }
 
 const ACTIONS = [
-  'ALL', 'ADD_TO_CART', 'CHECKOUT_SUCCESS', 'CHECKOUT_FAILED', 'POLICY_BLOCK',
-  'DISCOVER', 'CATALOG_QUERY', 'HUMAN_REVIEW_REQUESTED', 'HUMAN_REVIEW_APPROVED',
+  'ALL', 'ADD_TO_CART', 'CHECKOUT_SUCCESS', 'CHECKOUT_FAILED',
+  'POLICY_BLOCK', 'DISCOVER', 'CATALOG_QUERY',
+  'HUMAN_REVIEW_REQUESTED', 'HUMAN_REVIEW_APPROVED',
 ];
+
+const PAGE_SIZE = 50;
 
 export default function AuditLog() {
   const { merchantId } = useApp();
@@ -29,13 +34,8 @@ export default function AuditLog() {
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<LogEntry | null>(null);
   const [filters, setFilters] = useState({
-    action: 'ALL',
-    agent_id: '',
-    from: '',
-    to: '',
-    policy_failed: false,
+    action: 'ALL', agent_id: '', from: '', to: '', policy_failed: false,
   });
-  const PAGE_SIZE = 50;
 
   const fetchLogs = useCallback(async () => {
     if (!merchantId) return;
@@ -48,7 +48,6 @@ export default function AuditLog() {
     if (filters.from) params.from = filters.from;
     if (filters.to) params.to = filters.to;
     if (filters.policy_failed) params.policy_failed = 'true';
-
     const { data } = await axios.get(`/v1/merchants/${merchantId}/logs`, { params });
     setLogs(data.logs ?? []);
     setTotal(data.total ?? 0);
@@ -58,59 +57,62 @@ export default function AuditLog() {
 
   const exportCsv = () => {
     const headers = ['id', 'timestamp', 'agent_id', 'action', 'duration_ms', 'error'];
-    const rows = logs.map((l) =>
-      headers.map((h) => JSON.stringify((l as any)[h] ?? '')).join(',')
-    );
+    const rows = logs.map((l) => headers.map((h) => JSON.stringify((l as any)[h] ?? '')).join(','));
     const csv = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `aisle-audit-${merchantId}-${Date.now()}.csv`;
-    a.click();
+    a.href = url; a.download = `aisle-audit-${merchantId}-${Date.now()}.csv`; a.click();
   };
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="text-5xl mb-4">📋</div>
-          <h2 className="text-xl font-bold text-white mb-2">Enter Merchant ID</h2>
-          <p className="text-gray-400">Set your Merchant ID in the sidebar first.</p>
+      <div className="flex items-center justify-center h-full neural-bg grid-mesh">
+        <div className="text-center animate-fade-up">
+          <div className="w-14 h-14 mx-auto mb-4 border border-green-primary/20 rounded flex items-center justify-center bg-green-primary/5 glow-green">
+            <ScrollText size={22} className="text-green-primary" />
+          </div>
+          <h2 className="text-sm font-bold text-white tracking-widest mb-2">AUDIT_LOG_EXPLORER</h2>
+          <p className="text-xs text-gray-mid font-mono">Set your Merchant ID in the sidebar panel.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-bg-base">
       {/* Header */}
-      <div className="p-6 border-b border-bg-border">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">📋 Audit Log Explorer</h1>
-            <p className="text-gray-400 text-sm mt-1">{total} total entries</p>
+      <div className="px-6 py-4 border-b border-bg-border">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <ScrollText size={15} className="text-green-primary" />
+            <h1 className="text-sm font-bold text-white tracking-widest">AUDIT_LOG_EXPLORER</h1>
+            <span className="badge badge-neutral ml-1">{total} ENTRIES</span>
           </div>
-          <button id="export-csv" onClick={exportCsv} className="btn-ghost text-sm">
-            ⬇ Export CSV
+          <button id="export-csv" onClick={exportCsv} className="btn-ghost text-[10px]">
+            <Download size={11} />
+            EXPORT_CSV
           </button>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter size={11} className="text-gray-mid shrink-0" />
           <select
             id="filter-action"
             value={filters.action}
             onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-            className="input-field text-sm"
+            className="input-field text-[10px] w-auto"
+            style={{ paddingTop: '0.3rem', paddingBottom: '0.3rem' }}
           >
-            {ACTIONS.map((a) => <option key={a} value={a}>{a === 'ALL' ? 'All Actions' : a}</option>)}
+            {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
 
           <input
             id="filter-agent-id"
-            className="input-field text-sm font-mono w-48"
+            className="input-field text-[10px] font-mono w-36"
             placeholder="Agent ID..."
+            style={{ paddingTop: '0.3rem', paddingBottom: '0.3rem' }}
             value={filters.agent_id}
             onChange={(e) => setFilters({ ...filters, agent_id: e.target.value })}
           />
@@ -118,19 +120,13 @@ export default function AuditLog() {
           <input
             id="filter-from"
             type="datetime-local"
-            className="input-field text-sm"
+            className="input-field text-[10px] w-auto"
+            style={{ paddingTop: '0.3rem', paddingBottom: '0.3rem' }}
             value={filters.from}
             onChange={(e) => setFilters({ ...filters, from: e.target.value })}
           />
-          <input
-            id="filter-to"
-            type="datetime-local"
-            className="input-field text-sm"
-            value={filters.to}
-            onChange={(e) => setFilters({ ...filters, to: e.target.value })}
-          />
 
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-[10px] text-gray-mid cursor-pointer font-mono">
             <input
               id="filter-policy-failed"
               type="checkbox"
@@ -138,88 +134,93 @@ export default function AuditLog() {
               onChange={(e) => setFilters({ ...filters, policy_failed: e.target.checked })}
               className="accent-status-blocked"
             />
-            Policy violations only
+            VIOLATIONS_ONLY
           </label>
 
-          <button id="apply-filters" onClick={fetchLogs} className="btn-primary text-sm px-4">
-            Apply Filters
+          <button id="apply-filters" onClick={fetchLogs} className="btn-primary text-[10px] px-3 py-1.5">
+            APPLY
           </button>
         </div>
       </div>
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-bg-surface/90 backdrop-blur-sm">
-            <tr className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-              <th className="text-left px-6 py-3">Timestamp</th>
-              <th className="text-left px-4 py-3">Agent ID</th>
-              <th className="text-left px-4 py-3">Action</th>
-              <th className="text-left px-4 py-3">Status</th>
-              <th className="text-left px-4 py-3">Reasoning</th>
-              <th className="text-right px-4 py-3">ms</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr
-                key={log.id}
-                id={`audit-row-${log.id}`}
-                onClick={() => setSelected(log)}
-                className="table-row"
-              >
-                <td className="px-6 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">
-                  {new Date(log.timestamp).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-300 max-w-[120px] truncate">
-                  {log.agent_id ?? '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-200 font-medium text-sm">{log.action}</td>
-                <td className="px-4 py-3"><StatusBadge status={log.action} /></td>
-                <td className="px-4 py-3 text-gray-500 text-xs max-w-[240px] truncate">
-                  {log.error
-                    ? <span className="text-status-blocked">{log.error}</span>
-                    : log.reasoning
-                    ? log.reasoning.slice(0, 70) + '...'
-                    : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-xs text-right font-mono">
-                  {log.duration_ms ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {logs.length === 0 && (
-          <div className="flex items-center justify-center h-40 text-gray-500">
-            No log entries match your filters.
+        {logs.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-gray-mid">
+            <div className="text-center">
+              <Activity size={24} className="mx-auto mb-2 text-gray-mid/40" />
+              <p className="text-xs font-mono">NO_ENTRIES_MATCH_FILTERS</p>
+            </div>
           </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-bg-surface/95 backdrop-blur-sm border-b border-bg-border z-10">
+              <tr className="text-[9px] text-gray-mid font-medium tracking-widest">
+                <th className="text-left px-5 py-2.5">TIMESTAMP</th>
+                <th className="text-left px-3 py-2.5">AGENT_ID</th>
+                <th className="text-left px-3 py-2.5">ACTION</th>
+                <th className="text-left px-3 py-2.5">STATUS</th>
+                <th className="text-left px-3 py-2.5">REASONING / ERROR</th>
+                <th className="text-right px-3 py-2.5">ms</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr
+                  key={log.id}
+                  id={`audit-row-${log.id}`}
+                  onClick={() => setSelected(log)}
+                  className="table-row"
+                >
+                  <td className="px-5 py-2.5 text-gray-mid font-mono whitespace-nowrap">
+                    {new Date(log.timestamp).toLocaleString('en-US', { hour12: false })}
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-[10px] text-blue-electric/70 max-w-[100px] truncate">
+                    {log.agent_id ? log.agent_id.split('_').pop()?.slice(0, 10) : '—'}
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-gray-cold tracking-wide">
+                    {log.action.replace(/_/g, '_')}
+                  </td>
+                  <td className="px-3 py-2.5"><StatusBadge status={log.action} /></td>
+                  <td className="px-3 py-2.5 text-gray-mid max-w-[240px] truncate font-mono italic">
+                    {log.error
+                      ? <span className="text-status-blocked not-italic">{log.error}</span>
+                      : log.reasoning ? `"${log.reasoning.slice(0, 65)}..."` : '—'}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-gray-mid/50 font-mono">
+                    {log.duration_ms ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
       {/* Pagination */}
       {total > PAGE_SIZE && (
-        <div className="p-4 border-t border-bg-border flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+        <div className="px-6 py-3 border-t border-bg-border flex items-center justify-between">
+          <span className="text-[10px] text-gray-mid font-mono">
+            SHOWING {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} OF {total}
           </span>
           <div className="flex gap-2">
             <button
               id="prev-page"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="btn-ghost text-sm disabled:opacity-30"
+              className="btn-ghost disabled:opacity-30"
             >
-              ← Previous
+              <ChevronLeft size={12} />
+              PREV
             </button>
             <button
               id="next-page"
               onClick={() => setPage((p) => p + 1)}
               disabled={(page + 1) * PAGE_SIZE >= total}
-              className="btn-ghost text-sm disabled:opacity-30"
+              className="btn-ghost disabled:opacity-30"
             >
-              Next →
+              NEXT
+              <ChevronRight size={12} />
             </button>
           </div>
         </div>

@@ -38,9 +38,9 @@ export default function App() {
   return (
     <AppContext.Provider value={{ merchantId, setMerchantId: handleSetMerchantId, pendingCount, setPendingCount }}>
       <BrowserRouter>
-        <div className="flex h-screen overflow-hidden bg-bg-base">
+        <div className="flex min-h-[100dvh] overflow-hidden bg-bg-base">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto h-screen">
             <Routes>
               <Route path="/" element={<Navigate to="/live" replace />} />
               <Route path="/live" element={<LiveFeed />} />
