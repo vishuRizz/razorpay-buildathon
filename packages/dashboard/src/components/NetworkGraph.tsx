@@ -66,7 +66,8 @@ export default function NetworkGraph({ logs, merchantId }: NetworkGraphProps) {
   useEffect(() => {
     // Re-heat simulation when data changes
     if (fgRef.current) {
-      fgRef.current.d3Force('charge').strength(-200);
+      fgRef.current.d3Force('charge').strength(-300);
+      fgRef.current.d3Force('link').distance(80);
       fgRef.current.d3ReheatSimulation();
     }
   }, [graphData]);
@@ -74,19 +75,43 @@ export default function NetworkGraph({ logs, merchantId }: NetworkGraphProps) {
   return (
     <div ref={containerRef} className="w-full h-[250px] bg-bg-surface border-b border-bg-border relative overflow-hidden flex items-center justify-center">
       <div className="absolute top-3 left-4 z-10">
-        <div className="text-[10px] font-mono tracking-widest text-green-primary">AGENT_NETWORK_TOPOLOGY</div>
-        <div className="text-[9px] text-gray-mid font-mono mt-1">Live active connections</div>
+        <div className="text-[10px] font-mono tracking-widest text-green-primary">LIVE_AGENT_TRAFFIC</div>
+        <div className="text-[9px] text-gray-mid font-mono mt-1">Autonomous buyer connections to this store</div>
       </div>
       
+      <div className="absolute bottom-3 left-4 z-10 flex gap-4 text-[9px] font-mono text-gray-mid bg-bg-base/80 p-1.5 rounded border border-bg-border">
+        <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#76B900] rounded-full shadow-[0_0_5px_#76B900]"></span> Purchase Success</div>
+        <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#FF3B3B] rounded-full shadow-[0_0_5px_#FF3B3B]"></span> Policy Blocked</div>
+        <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#F59E0B] rounded-full shadow-[0_0_5px_#F59E0B]"></span> Pending Review</div>
+      </div>
+
       {graphData.nodes.length > 0 && (
         <ForceGraph2D
           ref={fgRef}
           width={dimensions.width}
           height={dimensions.height}
           graphData={graphData}
-          nodeLabel="id"
-          nodeColor={node => node.group === 'merchant' ? '#76B900' : '#00BFFF'}
-          nodeRelSize={4}
+          nodeCanvasObject={(node: any, ctx, globalScale) => {
+            const label = node.group === 'merchant' ? 'MERCHANT_STORE' : `AGENT_${node.id.split('_').pop()?.slice(0,6).toUpperCase()}`;
+            const fontSize = 10 / globalScale;
+            ctx.font = `${fontSize}px monospace`;
+            const textWidth = ctx.measureText(label).width;
+            const padding = 4 / globalScale;
+            const bckgDimensions = [textWidth + padding * 2, fontSize + padding * 2];
+            
+            const isStore = node.group === 'merchant';
+            ctx.fillStyle = isStore ? 'rgba(118, 185, 0, 0.1)' : 'rgba(0, 191, 255, 0.1)';
+            ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
+            
+            ctx.strokeStyle = isStore ? '#76B900' : '#00BFFF';
+            ctx.lineWidth = 0.5 / globalScale;
+            ctx.strokeRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = isStore ? '#76B900' : '#00BFFF';
+            ctx.fillText(label, node.x, node.y);
+          }}
           linkColor={link => {
             const action = (link as any).lastAction;
             if (['POLICY_BLOCK', 'CHECKOUT_FAILED', 'HUMAN_REVIEW_REJECTED'].includes(action)) return '#FF3B3B';
