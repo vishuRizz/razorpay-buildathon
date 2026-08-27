@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useApp } from '../App';
 import StatusBadge from '../components/StatusBadge';
 import AuditDrawer from '../components/AuditDrawer';
+import AgentDrawer from '../components/AgentDrawer';
 import {
   Zap, Pause, Play, RefreshCw, ShoppingCart, Search,
   CheckCircle2, XCircle, Clock, Activity
@@ -56,13 +57,13 @@ function getRowAccent(action: string) {
   return 'border-l-2 border-l-transparent';
 }
 
-function AgentChip({ id }: { id: string }) {
+function AgentChip({ id, onClick }: { id: string, onClick?: (id: string) => void }) {
   const short = id ? id.split('_').pop()?.slice(0, 8) ?? id.slice(0, 8) : '—';
   return (
-    <span className="inline-flex items-center gap-1 bg-blue-dim rounded px-1.5 py-0.5">
+    <button onClick={() => onClick && onClick(id)} className="inline-flex items-center gap-1 bg-blue-dim rounded px-1.5 py-0.5 hover:bg-blue-electric/20 transition-colors">
       <Activity size={9} className="text-blue-electric shrink-0" />
       <span className="text-[10px] text-blue-electric font-mono">{short}</span>
-    </span>
+    </button>
   );
 }
 
@@ -70,6 +71,7 @@ export default function LiveFeed() {
   const { merchantId, setPendingCount } = useApp();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selected, setSelected] = useState<LogEntry | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [error, setError] = useState('');
@@ -103,10 +105,52 @@ export default function LiveFeed() {
 
   useEffect(() => {
     fetchLogs();
-    if (!isLive) return;
-    const interval = setInterval(fetchLogs, 4000);
-    return () => clearInterval(interval);
-  }, [fetchLogs, isLive]);
+    if (!merchantId) return;
+
+    // Connect to SSE stream
+    const eventSource = new EventSource(`/v1/merchants/${merchantId}/stream`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'log') {
+          if (!isLive) return;
+          const log = data.data;
+          
+          setLogs(prev => {
+            const exists = prev.find(l => l.id === log.id);
+            if (exists) return prev;
+            return [log, ...prev].slice(0, 100);
+          });
+          
+          setNewIds(prev => new Set(prev).add(log.id));
+          setTimeout(() => {
+            setNewIds(prev => {
+              const next = new Set(prev);
+              next.delete(log.id);
+              return next;
+            });
+          }, 1500);
+          
+          setLastRefresh(new Date());
+          if (log.action === 'HUMAN_REVIEW_REQUESTED') {
+             setPendingCount(p => p + 1);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse SSE message', e);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setError('Live stream connection lost.');
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [merchantId, isLive, fetchLogs, setPendingCount]);
 
   const stats = [
     { label: 'EVENTS', value: logs.length, color: 'text-white' },
@@ -178,7 +222,7 @@ export default function LiveFeed() {
       </div>
 
       {/* Network Graph */}
-      <NetworkGraph logs={logs} merchantId={merchantId} />
+      <NetworkGraph logs={logs} merchantId={merchantId} onAgentClick={setSelectedAgent} />
 
       {/* Main Content */}
       {error && (
@@ -228,7 +272,7 @@ export default function LiveFeed() {
                       {new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false })}
                     </td>
                     <td className="px-3 py-2.5">
-                      <AgentChip id={log.agent_id} />
+                      <AgentChip id={log.agent_id} onClick={setSelectedAgent} />
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
@@ -258,7 +302,9 @@ export default function LiveFeed() {
         )}
       </div>
 
-      {selected && <AuditDrawer log={selected} onClose={() => setSelected(null)} />}
+      {/* Drawers */}
+      <AuditDrawer log={selected} onClose={() => setSelected(null)} />
+      <AgentDrawer agentId={selectedAgent} onClose={() => setSelectedAgent(null)} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ interface Policies {
   daily_ai_gmv_cap?: number;
   allowed_agent_types?: string[];
   discount_cap_percent?: number;
+  emergency_stop?: boolean;
 }
 
 const AGENT_TYPES = ['shopping', 'travel', 'enterprise', 'personal', 'research'];
@@ -63,6 +64,7 @@ export default function PolicyEditor() {
     daily_ai_gmv_cap: 50000,
     discount_cap_percent: 10,
     allowed_agent_types: ['shopping', 'travel'],
+    emergency_stop: false,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -144,6 +146,36 @@ export default function PolicyEditor() {
             {aiEnabled
               ? <ToggleRight size={32} className="text-green-primary" strokeWidth={1.5} />
               : <ToggleLeft size={32} className="text-status-blocked" strokeWidth={1.5} />
+            }
+          </button>
+        </div>
+      </div>
+
+      {/* BIG RED KILL SWITCH */}
+      <div className="card border-glow mb-4 relative overflow-hidden bg-status-blocked/5 border-status-blocked/30">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-status-blocked/60 to-transparent" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded border flex items-center justify-center transition-all border-status-blocked/40 bg-status-blocked/20 glow-red`}>
+              <AlertCircle size={14} className="text-status-blocked" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-status-blocked tracking-wide">EMERGENCY_STOP</div>
+              <div className="text-[10px] text-gray-mid mt-0.5 font-mono">
+                {policies.emergency_stop
+                  ? 'CRITICAL OVERRIDE ACTIVE — All AI commerce globally hard-blocked'
+                  : 'Activate to instantly halt all AI transactions across this store'}
+              </div>
+            </div>
+          </div>
+          <button
+            id="toggle-emergency-stop"
+            onClick={() => setPolicies({ ...policies, emergency_stop: !policies.emergency_stop })}
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+          >
+            {policies.emergency_stop
+              ? <ToggleRight size={32} className="text-status-blocked glow-red" strokeWidth={1.5} />
+              : <ToggleLeft size={32} className="text-gray-mid/40" strokeWidth={1.5} />
             }
           </button>
         </div>

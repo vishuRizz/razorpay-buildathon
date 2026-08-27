@@ -40,6 +40,12 @@ export class PolicyEngine {
     this.requires_human_review = false;
     this.block_reason = null;
 
+    // --- Rule 0: Global Emergency Kill Switch ---
+    if (merchantPolicies.emergency_stop) {
+      this.fail('EMERGENCY_STOP', 'Global kill switch activated by merchant. All AI traffic is blocked.', 'Disable emergency stop to resume commerce');
+      return this.buildResult(8);
+    }
+
     // --- Rule 1: AIT Validity & Reputation ---
     await this.checkAITValidityAndReputation(agent.agent_id);
     if (this.block_reason) return this.buildResult(8);

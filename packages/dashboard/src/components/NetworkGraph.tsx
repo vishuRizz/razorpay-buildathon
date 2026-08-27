@@ -10,9 +10,10 @@ interface LogEntry {
 interface NetworkGraphProps {
   logs: LogEntry[];
   merchantId: string;
+  onAgentClick?: (agentId: string) => void;
 }
 
-export default function NetworkGraph({ logs, merchantId }: NetworkGraphProps) {
+export default function NetworkGraph({ logs, merchantId, onAgentClick }: NetworkGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<any>();
   const [dimensions, setDimensions] = React.useState({ width: 800, height: 250 });
@@ -129,6 +130,11 @@ export default function NetworkGraph({ logs, merchantId }: NetworkGraphProps) {
             return '#76B900';
           }}
           backgroundColor="#0D0D0D"
+          onNodeClick={node => {
+            if (node.group === 'agent' && onAgentClick) {
+              onAgentClick(node.id as string);
+            }
+          }}
         />
       )}
     </div>

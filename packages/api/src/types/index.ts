@@ -18,7 +18,9 @@ export interface MerchantPolicies {
   human_review_above?: number;
   allowed_agent_types?: string[];
   discount_cap_percent?: number;
+  blocked_categories?: string[];
   daily_ai_gmv_cap?: number;
+  emergency_stop?: boolean;
 }
 
 export interface Product {

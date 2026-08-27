@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { query, queryOne } from '../db/client';
 import { validate } from '../middleware/validate';
-import { getMerchantLogs, getMerchantAnalytics } from '../services/audit';
+import { getMerchantLogs, getMerchantAnalytics, auditStream } from '../services/audit';
 import { Merchant, MerchantPolicies, Order } from '../types';
 
 const router = Router();
@@ -36,6 +36,7 @@ const RegisterMerchantSchema = z.object({
     allowed_agent_types: z.array(z.string()).optional(),
     discount_cap_percent: z.number().min(0).max(100).optional(),
     daily_ai_gmv_cap: z.number().positive().optional(),
+    emergency_stop: z.boolean().optional(),
   }).default({}),
 });
 
@@ -47,6 +48,7 @@ const UpdatePoliciesSchema = z.object({
     allowed_agent_types: z.array(z.string()).optional(),
     discount_cap_percent: z.number().min(0).max(100).optional(),
     daily_ai_gmv_cap: z.number().positive().optional(),
+    emergency_stop: z.boolean().optional(),
   }).optional(),
 });
 
@@ -175,6 +177,35 @@ router.get('/:merchantId/logs', async (req: Request, res: Response) => {
   });
 
   res.json({ logs, total, limit: parseInt(limit, 10), offset: parseInt(offset, 10) });
+});
+
+/**
+ * GET /v1/merchants/:merchantId/stream
+ * Server-Sent Events (SSE) stream for real-time audit logs.
+ */
+router.get('/:merchantId/stream', (req: Request, res: Response) => {
+  const merchantId = req.params.merchantId;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Send an initial heartbeat
+  res.write('data: {"type": "ping"}\n\n');
+
+  const listener = (data: any) => {
+    if (data.merchant_id === merchantId) {
+      res.write(`data: ${JSON.stringify({ type: 'log', data: data.log })}\n\n`);
+    }
+  };
+
+  auditStream.on('new_log', listener);
+
+  req.on('close', () => {
+    auditStream.removeListener('new_log', listener);
+    res.end();
+  });
 });
 
 /**

@@ -1,6 +1,9 @@
 import { query as dbQuery } from '../db/client';
 import { AuditLogEntry, AuditAction, PolicyResult } from '../types';
 import { nanoid } from 'nanoid';
+import { EventEmitter } from 'events';
+
+export const auditStream = new EventEmitter();
 
 // ================================================================
 // Audit Log Service — append-only, never throws
@@ -62,6 +65,24 @@ export async function logAudit(entry: LogInput): Promise<string> {
         );
       }
     }
+    // Fire SSE event
+    auditStream.emit('new_log', {
+      merchant_id: entry.merchant_id,
+      log: {
+        id,
+        agent_id: entry.agent_id,
+        merchant_id: entry.merchant_id,
+        action: entry.action,
+        input: entry.input,
+        output: entry.output,
+        reasoning: entry.reasoning,
+        policy_result: entry.policy_result,
+        duration_ms: entry.duration_ms,
+        error: entry.error,
+        timestamp: new Date().toISOString(),
+      }
+    });
+
   } catch (err) {
     // Log to console but never propagate — audit failure must not break commerce
     console.error('[AUDIT] Failed to write audit log entry:', err);

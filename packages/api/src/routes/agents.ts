@@ -102,7 +102,33 @@ router.post('/:agentId/revoke', async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ message: `Agent ${req.params.agentId} revoked successfully` });
+  res.json({ success: true, agent_id: req.params.agentId });
+});
+
+/**
+ * GET /v1/agents/:agentId
+ * Get agent profile and reputation score
+ */
+router.get('/:agentId', async (req: Request, res: Response) => {
+  const agent = await queryOne<Agent>(
+    'SELECT id, owner_email, constraints, revoked, reputation_score, daily_spend_inr, created_at FROM agents WHERE id = $1',
+    [req.params.agentId]
+  );
+
+  if (!agent) {
+    res.status(404).json({ error: 'NOT_FOUND', detail: 'Agent not found' });
+    return;
+  }
+
+  // Get recent purchases for ledger
+  const ledger = await query(
+    `SELECT id, action, output, timestamp FROM audit_log 
+     WHERE agent_id = $1 
+     ORDER BY timestamp DESC LIMIT 10`,
+    [req.params.agentId]
+  ) as any[];
+
+  res.json({ ...agent, ledger });
 });
 
 export default router;
