@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 // Load env vars from root .env
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
-import { pool } from './client';
+import { getPool } from './client';
 
 async function migrate() {
   const schemaPath = path.join(__dirname, 'schema.sql');
@@ -14,7 +14,7 @@ async function migrate() {
   console.log('🗄️  Running AISLE database migrations on Neon...\n');
 
   try {
-    await pool.query(sql);
+    await getPool().query(sql);
     console.log('✅ Schema applied successfully!\n');
     console.log('Tables created:');
     console.log('  • merchants');
@@ -28,7 +28,7 @@ async function migrate() {
     console.error('❌ Migration failed:', err);
     process.exit(1);
   } finally {
-    await pool.end();
+    await getPool().end();
   }
 }
 

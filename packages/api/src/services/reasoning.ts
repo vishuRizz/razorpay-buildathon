@@ -63,7 +63,7 @@ Write only the 2-3 sentence explanation. No preamble.`;
   try {
     const groq = getClient();
     const response = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'allam-2-7b',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -90,7 +90,7 @@ export async function generateBlockTrace(
   try {
     const groq = getClient();
     const response = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'allam-2-7b',
       max_tokens: 150,
       messages: [
         {

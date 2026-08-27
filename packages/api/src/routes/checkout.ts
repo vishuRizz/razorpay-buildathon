@@ -26,7 +26,7 @@ const CheckoutSchema = z.object({
  * Initiate payment. Runs Policy Engine then calls Razorpay.
  */
 router.post(
-  '/:cartId/checkout',
+  '/cart/:cartId/checkout',
   requireAIT,
   validate(CheckoutSchema),
   async (req: Request, res: Response) => {
