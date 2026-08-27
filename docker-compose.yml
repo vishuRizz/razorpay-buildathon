@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build:
+      context: ./packages/dashboard
+      dockerfile: Dockerfile
+    ports:
+      - '5173:80'
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+# Note: No Postgres service here — we use Neon (serverless Postgres).
+# DATABASE_URL in .env points to your Neon connection string.

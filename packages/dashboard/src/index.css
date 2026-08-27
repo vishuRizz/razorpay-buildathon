@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+
+  body {
+    @apply bg-bg-base text-gray-100 font-sans antialiased;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-bg-surface; }
+  ::-webkit-scrollbar-thumb { @apply bg-bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-brand-dark; }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-surface border border-bg-border rounded-xl p-5;
+  }
+
+  .btn-primary {
+    @apply bg-brand hover:bg-brand-dark text-white px-4 py-2 rounded-lg font-medium
+           transition-all duration-200 hover:shadow-lg hover:shadow-brand/20 active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply text-gray-400 hover:text-white hover:bg-bg-elevated px-4 py-2 rounded-lg
+           font-medium transition-all duration-200;
+  }
+
+  .badge-approved {
+    @apply bg-status-approved/10 text-status-approved border border-status-approved/20
+           text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+  .badge-pending {
+    @apply bg-status-pending/10 text-status-pending border border-status-pending/20
+           text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+  .badge-blocked {
+    @apply bg-status-blocked/10 text-status-blocked border border-status-blocked/20
+           text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .input-field {
+    @apply bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-gray-100
+           placeholder-gray-500 focus:outline-none focus:border-brand transition-colors;
+  }
+
+  .table-row {
+    @apply border-b border-bg-border hover:bg-bg-elevated/50 transition-colors cursor-pointer;
+  }
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Glow effects */
+.glow-brand { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15); }
+.glow-approved { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
+.glow-blocked { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); }
+
+/* Live dot pulse */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.live-dot { animation: live-pulse 2s ease-in-out infinite; }
