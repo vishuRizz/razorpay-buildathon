@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, Dispatch, SetStateAction } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import LiveFeed from './pages/LiveFeed';
@@ -12,7 +12,7 @@ interface AppContextType {
   merchantId: string;
   setMerchantId: (id: string) => void;
   pendingCount: number;
-  setPendingCount: (n: number) => void;
+  setPendingCount: Dispatch<SetStateAction<number>>;
 }
 
 const AppContext = createContext<AppContextType>({

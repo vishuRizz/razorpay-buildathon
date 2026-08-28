@@ -303,7 +303,7 @@ export default function LiveFeed() {
       </div>
 
       {/* Drawers */}
-      <AuditDrawer log={selected} onClose={() => setSelected(null)} />
+      {selected && <AuditDrawer log={selected} onClose={() => setSelected(null)} />}
       <AgentDrawer agentId={selectedAgent} onClose={() => setSelectedAgent(null)} />
     </div>
   );
