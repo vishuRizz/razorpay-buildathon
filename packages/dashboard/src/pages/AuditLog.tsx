@@ -67,12 +67,12 @@ export default function AuditLog() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full grid-mesh">
+      <div className="flex items-center justify-center h-full ">
         <div className="text-center animate-fade-up">
           <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
             <ScrollText size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">AUDIT_LOG_EXPLORER</h2>
+          <h2 className="text-2xl font-display text-foreground mb-2">Audit Log</h2>
           <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel.</p>
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function AuditLog() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <ScrollText size={15} className="text-foreground" />
-            <h1 className="text-sm font-bold text-foreground tracking-widest">AUDIT_LOG_EXPLORER</h1>
+            <h1 className="text-2xl font-display text-foreground">Audit Log</h1>
             <span className="badge badge-neutral ml-1">{total} ENTRIES</span>
           </div>
           <button id="export-csv" onClick={exportCsv} className="btn-ghost text-[10px]">

@@ -208,7 +208,9 @@
     @apply text-center animate-fade-up max-w-sm px-6;
   }
   .empty-state-icon {
-    @apply w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded-2xl flex items-center justify-center bg-foreground/5;
+    @apply w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center;
+    border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+    background: color-mix(in oklch, var(--foreground) 5%, transparent);
   }
 }
 

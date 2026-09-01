@@ -171,7 +171,7 @@ export default function SimulatePanel() {
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <Play size={15} className="text-foreground" />
-        <h1 className="text-sm font-bold text-foreground tracking-widest">DEMO_RUNNER</h1>
+        <h1 className="text-2xl font-display text-foreground">Demo Runner</h1>
       </div>
       <p className="text-[10px] text-muted-foreground font-mono mb-6">
         Trigger a complete AI agent purchase flow end-to-end. Watch events appear live in the Live Feed.

@@ -41,12 +41,12 @@ export default function Analytics() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full grid-mesh">
+      <div className="flex items-center justify-center h-full ">
         <div className="text-center animate-fade-up">
           <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
             <BarChart3 size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">ANALYTICS_ENGINE</h2>
+          <h2 className="text-2xl font-display text-foreground mb-2">Analytics</h2>
           <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar to load metrics.</p>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function Analytics() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <BarChart3 size={16} className="text-foreground" />
-        <h1 className="text-sm font-bold text-foreground tracking-widest">ANALYTICS_ENGINE</h1>
+        <h1 className="text-2xl font-display text-foreground">Analytics</h1>
         {loading && <span className="text-[9px] text-muted-foreground tracking-widest animate-pulse ml-2">LOADING...</span>}
       </div>
 

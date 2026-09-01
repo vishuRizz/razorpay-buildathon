@@ -96,12 +96,12 @@ export default function PolicyEditor() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full grid-mesh">
+      <div className="flex items-center justify-center h-full ">
         <div className="text-center animate-fade-up">
           <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
             <ShieldCheck size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">POLICY_ENGINE</h2>
+          <h2 className="text-2xl font-display text-foreground mb-2">Policy Engine</h2>
           <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel.</p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function PolicyEditor() {
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <ShieldCheck size={16} className="text-foreground" />
-        <h1 className="text-sm font-bold text-foreground tracking-widest">POLICY_ENGINE</h1>
+        <h1 className="text-2xl font-display text-foreground">Policy Engine</h1>
       </div>
       <p className="text-[10px] text-muted-foreground font-mono mb-6">
         Configure AI buyer rules. Changes take effect immediately for all future agent calls.

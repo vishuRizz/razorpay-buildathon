@@ -4,30 +4,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        background: 'oklch(0.985 0.002 90 / <alpha-value>)',
+        foreground: 'oklch(0.12 0.01 60 / <alpha-value>)',
         primary: {
-          DEFAULT: 'var(--primary)',
-          foreground: 'var(--primary-foreground)',
+          DEFAULT: 'oklch(0.12 0.01 60 / <alpha-value>)',
+          foreground: 'oklch(0.985 0.002 90 / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
+          DEFAULT: 'oklch(0.96 0.005 90 / <alpha-value>)',
+          foreground: 'oklch(0.12 0.01 60 / <alpha-value>)',
         },
         muted: {
-          DEFAULT: 'var(--muted)',
-          foreground: 'var(--muted-foreground)',
+          DEFAULT: 'oklch(0.94 0.005 90 / <alpha-value>)',
+          foreground: 'oklch(0.45 0.02 60 / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
+          DEFAULT: 'oklch(0.92 0.01 90 / <alpha-value>)',
+          foreground: 'oklch(0.12 0.01 60 / <alpha-value>)',
         },
-        border: 'var(--border)',
-        input: 'var(--input)',
-        ring: 'var(--ring)',
+        border: 'oklch(0.88 0.01 90 / <alpha-value>)',
+        input: 'oklch(0.92 0.01 90 / <alpha-value>)',
+        ring: 'oklch(0.12 0.01 60 / <alpha-value>)',
         card: {
-          DEFAULT: 'var(--card)',
-          foreground: 'var(--card-foreground)',
+          DEFAULT: 'oklch(1 0 0 / <alpha-value>)',
+          foreground: 'oklch(0.12 0.01 60 / <alpha-value>)',
         },
         status: {
           approved: 'var(--status-approved)',

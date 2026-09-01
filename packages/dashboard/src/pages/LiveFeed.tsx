@@ -177,45 +177,40 @@ export default function LiveFeed() {
     <>
       <div className="h-full flex flex-col bg-background">
         <div className="px-6 lg:px-8 py-6 border-b border-border">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-2">
                 <span className="w-8 h-px bg-foreground/30" />
                 Live Monitor
               </span>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-display text-foreground">Live Feed</h1>
-              {isLive && (
-                <div className="flex items-center gap-1 ml-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-circuit live-dot" />
-                  <span className="text-[9px] text-green-600 tracking-widest font-medium">LIVE</span>
-                </div>
-              )}
-              <span className="badge badge-neutral text-[9px] ml-2">LATEST {logs.length < 500 ? logs.length : 500}</span>
+                {isLive && (
+                  <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-600 live-dot" />
+                    Live
+                  </span>
+                )}
+                <span className="badge badge-neutral text-[9px]">{logs.length < 500 ? logs.length : 500} events</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground font-mono text-xs">{lastRefresh.toLocaleTimeString()}</span>
+              <button id="toggle-live" onClick={() => setIsLive(!isLive)} className="btn-ghost">
+                {isLive ? <Pause size={11} /> : <Play size={11} />}
+                {isLive ? 'Pause' : 'Resume'}
+              </button>
+              <button id="refresh-logs" onClick={fetchLogs} className="btn-ghost">
+                <RefreshCw size={11} />
+                Refresh
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="text-muted-foreground font-mono">{lastRefresh.toLocaleTimeString()}</span>
-            <button
-              id="toggle-live"
-              onClick={() => setIsLive(!isLive)}
-              className="btn-ghost"
-            >
-              {isLive ? <Pause size={11} /> : <Play size={11} />}
-              {isLive ? 'PAUSE' : 'RESUME'}
-            </button>
-            <button id="refresh-logs" onClick={fetchLogs} className="btn-ghost">
-              <RefreshCw size={11} />
-              REFRESH
-            </button>
-          </div>
-        </div>
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-4 gap-2 mt-3">
+          <div className="grid grid-cols-4 gap-3 mt-5">
           {stats.map((s) => (
-            <div key={s.label} className="bg-card border border-border rounded p-2.5 flex items-center gap-2 ">
+            <div key={s.label} className="card py-3 px-4">
               <div>
                 <div className={`text-lg font-bold font-mono leading-none ${s.color}`}>{s.value}</div>
                 <div className="text-[9px] text-muted-foreground tracking-widest mt-0.5">{s.label}</div>
