@@ -22,13 +22,13 @@ function SliderField({
 }) {
   const pct = ((value - min) / (max - min)) * 100;
   return (
-    <div className="py-4 border-b border-bg-border last:border-0">
+    <div className="py-4 border-b border-border last:border-0">
       <div className="flex justify-between items-start mb-1">
         <div>
-          <label htmlFor={id} className="text-xs text-gray-cold font-medium tracking-wide">{label}</label>
-          <p className="text-[10px] text-gray-mid mt-0.5">{desc}</p>
+          <label htmlFor={id} className="text-xs text-foreground/80 font-medium tracking-wide">{label}</label>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{desc}</p>
         </div>
-        <span className="text-green-primary font-bold font-mono text-sm shrink-0 ml-4">
+        <span className="text-foreground font-bold font-mono text-sm shrink-0 ml-4">
           {prefix}{value?.toLocaleString()}
         </span>
       </div>
@@ -43,11 +43,11 @@ function SliderField({
           onChange={(e) => onChange(Number(e.target.value))}
           className="w-full"
           style={{
-            background: `linear-gradient(to right, #76B900 ${pct}%, #2A2A2A ${pct}%)`,
+            background: `linear-gradient(to right, var(--foreground) ${pct}%, var(--border) ${pct}%)`,
           }}
         />
       </div>
-      <div className="flex justify-between text-[9px] text-gray-mid/50 font-mono mt-1">
+      <div className="flex justify-between text-[9px] text-muted-foreground/50 font-mono mt-1">
         <span>{prefix}{min.toLocaleString()}</span>
         <span>{prefix}{max.toLocaleString()}</span>
       </div>
@@ -96,42 +96,42 @@ export default function PolicyEditor() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full neural-bg grid-mesh">
+      <div className="flex items-center justify-center h-full grid-mesh">
         <div className="text-center animate-fade-up">
-          <div className="w-14 h-14 mx-auto mb-4 border border-green-primary/20 rounded flex items-center justify-center bg-green-primary/5 glow-green">
-            <ShieldCheck size={22} className="text-green-primary" />
+          <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
+            <ShieldCheck size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-white tracking-widest mb-2">POLICY_ENGINE</h2>
-          <p className="text-xs text-gray-mid font-mono">Set your Merchant ID in the sidebar panel.</p>
+          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">POLICY_ENGINE</h2>
+          <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-2xl animate-fade-up bg-bg-base neural-bg min-h-full">
+    <div className="p-6 max-w-2xl animate-fade-up bg-background min-h-full">
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
-        <ShieldCheck size={16} className="text-green-primary" />
-        <h1 className="text-sm font-bold text-white tracking-widest">POLICY_ENGINE</h1>
+        <ShieldCheck size={16} className="text-foreground" />
+        <h1 className="text-sm font-bold text-foreground tracking-widest">POLICY_ENGINE</h1>
       </div>
-      <p className="text-[10px] text-gray-mid font-mono mb-6">
+      <p className="text-[10px] text-muted-foreground font-mono mb-6">
         Configure AI buyer rules. Changes take effect immediately for all future agent calls.
       </p>
 
       {/* Kill Switch */}
-      <div className="card border-glow mb-4 relative overflow-hidden">
+      <div className="card  mb-4 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-primary/40 to-transparent" />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded border flex items-center justify-center transition-all ${
-              aiEnabled ? 'border-green-primary/30 bg-green-primary/10' : 'border-status-blocked/30 bg-status-blocked/10'
+              aiEnabled ? 'border-foreground/15 bg-foreground/5' : 'border-status-blocked/30 bg-status-blocked/10'
             }`}>
-              <ShieldCheck size={14} className={aiEnabled ? 'text-green-primary' : 'text-status-blocked'} />
+              <ShieldCheck size={14} className={aiEnabled ? 'text-foreground' : 'text-status-blocked'} />
             </div>
             <div>
-              <div className="text-xs font-bold text-white tracking-wide">AI_BUYERS_ENABLED</div>
-              <div className="text-[10px] text-gray-mid mt-0.5 font-mono">
+              <div className="text-xs font-bold text-foreground tracking-wide">AI_BUYERS_ENABLED</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                 {aiEnabled
                   ? 'Agents can discover and purchase from your store'
                   : 'All AI agent access is paused — no purchases allowed'}
@@ -144,7 +144,7 @@ export default function PolicyEditor() {
             className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           >
             {aiEnabled
-              ? <ToggleRight size={32} className="text-green-primary" strokeWidth={1.5} />
+              ? <ToggleRight size={32} className="text-foreground" strokeWidth={1.5} />
               : <ToggleLeft size={32} className="text-status-blocked" strokeWidth={1.5} />
             }
           </button>
@@ -152,7 +152,7 @@ export default function PolicyEditor() {
       </div>
 
       {/* BIG RED KILL SWITCH */}
-      <div className="card border-glow mb-4 relative overflow-hidden bg-status-blocked/5 border-status-blocked/30">
+      <div className="card  mb-4 relative overflow-hidden bg-status-blocked/5 border-status-blocked/30">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-status-blocked/60 to-transparent" />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export default function PolicyEditor() {
             </div>
             <div>
               <div className="text-xs font-bold text-status-blocked tracking-wide">EMERGENCY_STOP</div>
-              <div className="text-[10px] text-gray-mid mt-0.5 font-mono">
+              <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                 {policies.emergency_stop
                   ? 'CRITICAL OVERRIDE ACTIVE — All AI commerce globally hard-blocked'
                   : 'Activate to instantly halt all AI transactions across this store'}
@@ -175,7 +175,7 @@ export default function PolicyEditor() {
           >
             {policies.emergency_stop
               ? <ToggleRight size={32} className="text-status-blocked glow-red" strokeWidth={1.5} />
-              : <ToggleLeft size={32} className="text-gray-mid/40" strokeWidth={1.5} />
+              : <ToggleLeft size={32} className="text-muted-foreground/40" strokeWidth={1.5} />
             }
           </button>
         </div>
@@ -184,8 +184,8 @@ export default function PolicyEditor() {
       {/* Thresholds */}
       <div className="card mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <Sliders size={12} className="text-green-primary" />
-          <h2 className="text-[10px] font-medium text-gray-cold tracking-widest">ORDER_THRESHOLDS</h2>
+          <Sliders size={12} className="text-foreground" />
+          <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest">ORDER_THRESHOLDS</h2>
         </div>
         <SliderField
           id="slider-human-review"
@@ -232,8 +232,8 @@ export default function PolicyEditor() {
       {/* Agent Types */}
       <div className="card mb-5">
         <div className="flex items-center gap-2 mb-3">
-          <Users size={12} className="text-green-primary" />
-          <h2 className="text-[10px] font-medium text-gray-cold tracking-widest">ALLOWED_AGENT_TYPES</h2>
+          <Users size={12} className="text-foreground" />
+          <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest">ALLOWED_AGENT_TYPES</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {AGENT_TYPES.map((type) => {
@@ -249,8 +249,8 @@ export default function PolicyEditor() {
                 }}
                 className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium tracking-wider transition-all duration-200 border ${
                   active
-                    ? 'bg-green-primary/10 text-green-primary border-green-primary/30 glow-green'
-                    : 'bg-transparent text-gray-mid border-bg-border hover:border-green-primary/20 hover:text-gray-cold'
+                    ? 'bg-foreground/5 text-foreground border-foreground/15 '
+                    : 'bg-transparent text-muted-foreground border-border hover:border-foreground/10 hover:text-foreground/80'
                 }`}
               >
                 {type.toUpperCase()}

@@ -15,7 +15,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "openai": "^7.5.0"
   },
   "engines": {
     "node": ">=20.0.0",

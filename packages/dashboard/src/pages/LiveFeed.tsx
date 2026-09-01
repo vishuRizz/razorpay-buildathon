@@ -31,8 +31,8 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   CHECKOUT_FAILED:         <XCircle size={13} className="text-status-blocked" />,
   HUMAN_REVIEW_REJECTED:  <XCircle size={13} className="text-status-blocked" />,
   HUMAN_REVIEW_REQUESTED: <Clock size={13} className="text-status-pending" />,
-  ADD_TO_CART:             <ShoppingCart size={13} className="text-blue-electric" />,
-  DISCOVER:                <Search size={13} className="text-gray-mid" />,
+  ADD_TO_CART:             <ShoppingCart size={13} className="text-blue-600" />,
+  DISCOVER:                <Search size={13} className="text-muted-foreground" />,
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -60,9 +60,9 @@ function getRowAccent(action: string) {
 function AgentChip({ id, onClick }: { id: string, onClick?: (id: string) => void }) {
   const short = id ? id.split('_').pop()?.slice(0, 8) ?? id.slice(0, 8) : '—';
   return (
-    <button onClick={() => onClick && onClick(id)} className="inline-flex items-center gap-1 bg-blue-dim rounded px-1.5 py-0.5 hover:bg-blue-electric/20 transition-colors">
-      <Activity size={9} className="text-blue-electric shrink-0" />
-      <span className="text-[10px] text-blue-electric font-mono">{short}</span>
+    <button onClick={() => onClick && onClick(id)} className="inline-flex items-center gap-1 bg-blue-50 rounded px-1.5 py-0.5 hover:bg-blue-electric/20 transition-colors">
+      <Activity size={9} className="text-blue-600 shrink-0" />
+      <span className="text-[10px] text-blue-600 font-mono">{short}</span>
     </button>
   );
 }
@@ -120,7 +120,7 @@ export default function LiveFeed() {
           setLogs(prev => {
             const exists = prev.find(l => l.id === log.id);
             if (exists) return prev;
-            return [log, ...prev].slice(0, 100);
+            return [log, ...prev].slice(0, 500); // Increased to 500 for massive scale feel
           });
           
           setNewIds(prev => new Set(prev).add(log.id));
@@ -153,7 +153,7 @@ export default function LiveFeed() {
   }, [merchantId, isLive, fetchLogs, setPendingCount]);
 
   const stats = [
-    { label: 'EVENTS', value: logs.length, color: 'text-white' },
+    { label: 'EVENTS', value: logs.length, color: 'text-foreground' },
     { label: 'APPROVED', value: logs.filter(l => ['CHECKOUT_SUCCESS', 'HUMAN_REVIEW_APPROVED'].includes(l.action)).length, color: 'text-status-approved' },
     { label: 'PENDING', value: logs.filter(l => l.action === 'HUMAN_REVIEW_REQUESTED').length, color: 'text-status-pending' },
     { label: 'BLOCKED', value: logs.filter(l => ['POLICY_BLOCK', 'CHECKOUT_FAILED'].includes(l.action)).length, color: 'text-status-blocked' },
@@ -163,36 +163,38 @@ export default function LiveFeed() {
     return (
       <div className="flex items-center justify-center h-full grid-mesh">
         <div className="text-center animate-fade-up">
-          <div className="w-14 h-14 mx-auto mb-4 border border-green-primary/20 rounded flex items-center justify-center bg-green-primary/5 glow-green">
-            <Zap size={22} className="text-green-primary" />
+          <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
+            <Zap size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-white tracking-widest mb-2">AWAITING_MERCHANT_ID</h2>
-          <p className="text-xs text-gray-mid font-mono">Set your Merchant ID in the sidebar panel to begin monitoring.</p>
+          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">AWAITING_MERCHANT_ID</h2>
+          <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel to begin monitoring.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-bg-base neural-bg">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-bg-border">
+    <>
+      <div className="h-full flex flex-col bg-background neural-bg">
+        {/* Header */}
+      <div className="px-6 py-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Zap size={16} className="text-green-primary" />
-              <h1 className="text-sm font-bold text-white tracking-widest">LIVE_AGENT_FEED</h1>
+              <Zap size={16} className="text-foreground" />
+              <h1 className="text-sm font-bold text-foreground tracking-widest">LIVE_AGENT_FEED</h1>
               {isLive && (
                 <div className="flex items-center gap-1 ml-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-circuit live-dot" />
-                  <span className="text-[9px] text-green-circuit tracking-widest font-medium">LIVE</span>
+                  <span className="text-[9px] text-green-600 tracking-widest font-medium">LIVE</span>
                 </div>
               )}
+              <span className="badge badge-neutral text-[9px] ml-2">LATEST {logs.length < 500 ? logs.length : 500}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-[10px]">
-            <span className="text-gray-mid font-mono">{lastRefresh.toLocaleTimeString()}</span>
+            <span className="text-muted-foreground font-mono">{lastRefresh.toLocaleTimeString()}</span>
             <button
               id="toggle-live"
               onClick={() => setIsLive(!isLive)}
@@ -211,10 +213,10 @@ export default function LiveFeed() {
         {/* Stats strip */}
         <div className="grid grid-cols-4 gap-2 mt-3">
           {stats.map((s) => (
-            <div key={s.label} className="bg-bg-surface border border-bg-border rounded p-2.5 flex items-center gap-2 border-glow">
+            <div key={s.label} className="bg-card border border-border rounded p-2.5 flex items-center gap-2 ">
               <div>
                 <div className={`text-lg font-bold font-mono leading-none ${s.color}`}>{s.value}</div>
-                <div className="text-[9px] text-gray-mid tracking-widest mt-0.5">{s.label}</div>
+                <div className="text-[9px] text-muted-foreground tracking-widest mt-0.5">{s.label}</div>
               </div>
             </div>
           ))}
@@ -235,17 +237,17 @@ export default function LiveFeed() {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         {logs.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-mid">
+          <div className="flex items-center justify-center h-64 text-muted-foreground">
             <div className="text-center">
-              <Activity size={28} className="mx-auto mb-3 text-gray-mid/40" />
-              <p className="text-xs font-mono text-gray-mid">NO_AGENT_ACTIVITY_DETECTED</p>
-              <code className="text-[10px] text-gray-mid/50 mt-1.5 block">$ node demo/agent_travel.js</code>
+              <Activity size={28} className="mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-xs font-mono text-muted-foreground">NO_AGENT_ACTIVITY_DETECTED</p>
+              <code className="text-[10px] text-muted-foreground/50 mt-1.5 block">$ node demo/agent_travel.js</code>
             </div>
           </div>
         ) : (
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-bg-surface/95 backdrop-blur-sm z-10 border-b border-bg-border">
-              <tr className="text-[9px] text-gray-mid font-medium tracking-widest">
+            <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10 border-b border-border">
+              <tr className="text-[9px] text-muted-foreground font-medium tracking-widest">
                 <th className="text-left px-5 py-2.5">TIME</th>
                 <th className="text-left px-3 py-2.5">AGENT</th>
                 <th className="text-left px-3 py-2.5">ACTION</th>
@@ -260,7 +262,7 @@ export default function LiveFeed() {
                 const isNew = newIds.has(log.id);
                 const out = log.output as Record<string, unknown> | null;
                 const amount = out?.amount_inr ?? out?.subtotal_inr;
-                const icon = ACTION_ICONS[log.action] ?? <Activity size={13} className="text-gray-mid" />;
+                const icon = ACTION_ICONS[log.action] ?? <Activity size={13} className="text-muted-foreground" />;
                 return (
                   <tr
                     key={log.id}
@@ -268,7 +270,7 @@ export default function LiveFeed() {
                     onClick={() => setSelected(log)}
                     className={`table-row ${getRowAccent(log.action)} ${isNew ? 'event-new' : ''}`}
                   >
-                    <td className="px-5 py-2.5 text-gray-mid font-mono whitespace-nowrap">
+                    <td className="px-5 py-2.5 text-muted-foreground font-mono whitespace-nowrap">
                       {new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false })}
                     </td>
                     <td className="px-3 py-2.5">
@@ -277,21 +279,21 @@ export default function LiveFeed() {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
                         {icon}
-                        <span className="font-mono text-gray-cold tracking-wide">
+                        <span className="font-mono text-foreground/80 tracking-wide">
                           {ACTION_LABELS[log.action] ?? log.action}
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-green-primary font-medium">
+                    <td className="px-3 py-2.5 text-right font-mono text-foreground font-medium">
                       {amount ? `₹${Number(amount).toLocaleString()}` : '—'}
                     </td>
                     <td className="px-3 py-2.5">
                       <StatusBadge status={log.action} />
                     </td>
-                    <td className="px-3 py-2.5 text-gray-mid max-w-[180px] truncate font-mono italic">
+                    <td className="px-3 py-2.5 text-muted-foreground max-w-[180px] truncate font-mono italic">
                       {log.reasoning ? `"${log.reasoning.slice(0, 55)}..."` : '—'}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-gray-mid/50 font-mono">
+                    <td className="px-3 py-2.5 text-right text-muted-foreground/50 font-mono">
                       {log.duration_ms ?? '—'}
                     </td>
                   </tr>
@@ -301,10 +303,11 @@ export default function LiveFeed() {
           </table>
         )}
       </div>
+      </div>
 
       {/* Drawers */}
       {selected && <AuditDrawer log={selected} onClose={() => setSelected(null)} />}
       <AgentDrawer agentId={selectedAgent} onClose={() => setSelectedAgent(null)} />
-    </div>
+    </>
   );
 }

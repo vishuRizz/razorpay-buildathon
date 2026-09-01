@@ -14,6 +14,9 @@ import catalogRouter from './routes/catalog';
 import cartRouter from './routes/cart';
 import checkoutRouter from './routes/checkout';
 import simulateRouter from './routes/simulate';
+import webhooksRouter from './routes/webhooks';
+import agentEventsRouter from './routes/agentEvents';
+import agentRunRouter from './routes/agentRun';
 
 const app: Application = express();
 const PORT = process.env.PORT ?? 3001;
@@ -23,7 +26,12 @@ app.use(cors({
   origin: process.env.DASHBOARD_URL ?? 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ 
+  limit: '2mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Request logger
@@ -59,8 +67,18 @@ app.use('/v1/stores/:storeId', checkoutRouter);
 // Simulate endpoint (dashboard demo trigger)
 app.use('/v1/simulate', simulateRouter);
 
-// Serve landing page at root
-app.use(express.static(path.join(__dirname, '../../landing')));
+// Live agent brain events (LLM demo streaming)
+app.use('/v1/agent-events', agentEventsRouter);
+app.use('/v1/agent', agentRunRouter);
+
+// Webhooks
+app.use('/v1/webhooks', webhooksRouter);
+
+// Root → React dashboard landing (avoids duplicate static landing + auto-redirect confusion)
+const dashboardUrl = process.env.DASHBOARD_URL ?? 'http://localhost:5173';
+app.get('/', (_req, res) => {
+  res.redirect(302, dashboardUrl);
+});
 
 // ─── 404 Handler ─────────────────────────────────────────────
 app.use((_req, res) => {
@@ -85,6 +103,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`✅ API running at http://localhost:${PORT}`);
+    console.log(`   Dashboard: ${dashboardUrl}`);
     console.log(`   Health: http://localhost:${PORT}/health`);
     console.log(`   Stores: http://localhost:${PORT}/v1/stores`);
     console.log('\n📖 Run demo scripts:');

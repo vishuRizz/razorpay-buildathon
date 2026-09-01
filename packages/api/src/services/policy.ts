@@ -2,7 +2,7 @@ import { query, queryOne } from '../db/client';
 import { AgentTokenPayload, CartItem, MerchantPolicies, PolicyResult, Agent } from '../types';
 
 // ================================================================
-// AISLE Policy Engine — 8-Rule Safety Enforcer
+// AISLE Policy Engine — 9-Rule Safety Enforcer
 // Every checkout runs through this BEFORE any Razorpay call.
 // ================================================================
 
@@ -58,29 +58,33 @@ export class PolicyEngine {
     await this.checkDailyLimit(agent.agent_id, cartTotal, agent.spending_limit_per_day_inr);
     if (this.block_reason) return this.buildResult(8);
 
-    // --- Rule 4: Category Policy ---
+    // --- Rule 4: Velocity Limits ---
+    await this.checkVelocityLimits(agent.agent_id);
+    if (this.block_reason) return this.buildResult(9);
+
+    // --- Rule 5: Category Policy ---
     this.checkCategoryPolicy(cartItems, agent.allowed_categories);
-    if (this.block_reason) return this.buildResult(8);
+    if (this.block_reason) return this.buildResult(9);
 
-    // --- Rule 5: Merchant AI Policy ---
+    // --- Rule 6: Merchant AI Policy ---
     this.checkMerchantAIPolicy(merchantAiBuyersEnabled);
-    if (this.block_reason) return this.buildResult(8);
+    if (this.block_reason) return this.buildResult(9);
 
-    // --- Rule 6: Human Review Threshold (soft — doesn't block) ---
+    // --- Rule 7: Human Review Threshold (soft — doesn't block) ---
     this.checkHumanReviewThreshold(
       cartTotal,
       merchantPolicies.human_review_above,
       agent.requires_human_confirm_above
     );
 
-    // --- Rule 7: Inventory Check ---
+    // --- Rule 8: Inventory Check ---
     await this.checkInventory(cartItems, merchantId);
-    if (this.block_reason) return this.buildResult(8);
+    if (this.block_reason) return this.buildResult(9);
 
-    // --- Rule 8: Merchant Daily GMV Cap ---
+    // --- Rule 9: Merchant Daily GMV Cap ---
     await this.checkMerchantGMVCap(merchantId, cartTotal, merchantPolicies.daily_ai_gmv_cap);
 
-    return this.buildResult(8);
+    return this.buildResult(9);
   }
 
   // ----------------------------------------------------------------
@@ -159,10 +163,34 @@ export class PolicyEngine {
   }
 
   // ----------------------------------------------------------------
-  // Rule 4: Category Policy
+  // Rule 4: Velocity Limits (Max 3 orders per 5 mins)
+  // ----------------------------------------------------------------
+  private async checkVelocityLimits(agentId: string): Promise<void> {
+    const result = await query(
+      `SELECT count(*) FROM audit_log 
+       WHERE agent_id = $1 
+         AND action IN ('CHECKOUT_SUCCESS', 'HUMAN_REVIEW_REQUESTED', 'PENDING') 
+         AND timestamp > NOW() - INTERVAL '5 minutes'`,
+      [agentId]
+    );
+
+    const txCount = parseInt(String(result[0].count), 10);
+    if (txCount >= 3) {
+      this.fail(
+        'VELOCITY_LIMIT_EXCEEDED',
+        `Agent has attempted ${txCount} transactions in the last 5 minutes.`,
+        'Wait 5 minutes before trying again or request rate limit increase.'
+      );
+    } else {
+      this.pass('VELOCITY_LIMITS');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 5: Category Policy
   // ----------------------------------------------------------------
   private checkCategoryPolicy(cartItems: CartItem[], allowedCategories: string[]): void {
-    if (allowedCategories.includes('*')) {
+    if (!allowedCategories || allowedCategories.includes('*')) {
       this.pass('CATEGORY_POLICY');
       return;
     }

@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, Dispatch, SetStateAction } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import LiveFeed from './pages/LiveFeed';
 import PolicyEditor from './pages/PolicyEditor';
 import AuditLog from './pages/AuditLog';
 import Analytics from './pages/Analytics';
 import SimulatePanel from './pages/SimulatePanel';
+import AgentBrain from './pages/AgentBrain';
+import Landing from './pages/Landing';
 
 // ── Global store context ──────────────────────────────────────
 interface AppContextType {
@@ -38,20 +40,29 @@ export default function App() {
   return (
     <AppContext.Provider value={{ merchantId, setMerchantId: handleSetMerchantId, pendingCount, setPendingCount }}>
       <BrowserRouter>
-        <div className="flex min-h-[100dvh] overflow-hidden bg-bg-base">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto h-screen">
-            <Routes>
-              <Route path="/" element={<Navigate to="/live" replace />} />
-              <Route path="/live" element={<LiveFeed />} />
-              <Route path="/simulate" element={<SimulatePanel />} />
-              <Route path="/policy" element={<PolicyEditor />} />
-              <Route path="/logs" element={<AuditLog />} />
-              <Route path="/analytics" element={<Analytics />} />
-            </Routes>
-          </main>
-        </div>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/live" element={<LiveFeed />} />
+            <Route path="/brain" element={<AgentBrain />} />
+            <Route path="/simulate" element={<SimulatePanel />} />
+            <Route path="/policy" element={<PolicyEditor />} />
+            <Route path="/logs" element={<AuditLog />} />
+            <Route path="/analytics" element={<Analytics />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </AppContext.Provider>
+  );
+}
+
+function DashboardLayout() {
+  return (
+    <div className="flex min-h-[100dvh] overflow-hidden bg-background">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto h-screen bg-background">
+        <Outlet />
+      </main>
+    </div>
   );
 }

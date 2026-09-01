@@ -74,13 +74,13 @@ export default function NetworkGraph({ logs, merchantId, onAgentClick }: Network
   }, [graphData]);
 
   return (
-    <div ref={containerRef} className="w-full h-[250px] bg-bg-surface border-b border-bg-border relative overflow-hidden flex items-center justify-center">
+    <div ref={containerRef} className="w-full h-[250px] bg-card border-b border-border relative overflow-hidden flex items-center justify-center">
       <div className="absolute top-3 left-4 z-10">
-        <div className="text-[10px] font-mono tracking-widest text-green-primary">LIVE_AGENT_TRAFFIC</div>
-        <div className="text-[9px] text-gray-mid font-mono mt-1">Autonomous buyer connections to this store</div>
+        <div className="text-[10px] font-mono tracking-widest text-foreground">Live Agent Traffic</div>
+        <div className="text-[9px] text-muted-foreground font-mono mt-1">Autonomous buyer connections to this store</div>
       </div>
       
-      <div className="absolute bottom-3 left-4 z-10 flex gap-4 text-[9px] font-mono text-gray-mid bg-bg-base/80 p-1.5 rounded border border-bg-border">
+      <div className="absolute bottom-3 left-4 z-10 flex gap-4 text-[9px] font-mono text-muted-foreground bg-background/80 p-1.5 rounded border border-border">
         <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#76B900] rounded-full shadow-[0_0_5px_#76B900]"></span> Purchase Success</div>
         <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#FF3B3B] rounded-full shadow-[0_0_5px_#FF3B3B]"></span> Policy Blocked</div>
         <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#F59E0B] rounded-full shadow-[0_0_5px_#F59E0B]"></span> Pending Review</div>
@@ -129,7 +129,7 @@ export default function NetworkGraph({ logs, merchantId, onAgentClick }: Network
             if (action === 'HUMAN_REVIEW_REQUESTED') return '#F59E0B';
             return '#76B900';
           }}
-          backgroundColor="#0D0D0D"
+          backgroundColor="transparent"
           onNodeClick={node => {
             if (node.group === 'agent' && onAgentClick) {
               onAgentClick(node.id as string);

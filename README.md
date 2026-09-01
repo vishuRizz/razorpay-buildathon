@@ -1,8 +1,10 @@
 # AISLE — AI-to-AI Commerce Protocol Layer
 
-> **The infrastructure layer that makes any Razorpay-enabled store natively transactable by autonomous AI agents.**
+> **AISLE is Razorpay's agent-commerce layer — the merchant-side complement to NPCI UAP / global ACP, with bounded spending via Agent Identity Tokens.**
 
-Built for the Razorpay AI Buildathon 2026 — Track 01.
+Makes any Razorpay-enabled store natively discoverable and transactable by autonomous AI buyers.
+
+Built for the Razorpay AI Buildathon 2026 — Track 01 (AI Growth & Agentic Commerce).
 
 ---
 
@@ -51,7 +53,11 @@ pnpm dev
 ## 🎬 Demo Scripts
 
 ```bash
-# Happy path: AI agent buys portable WiFi for Goa trip
+# LLM agent — launch from Dashboard → Agent Brain (no terminal)
+# Or: node demo/agent_travel_llm.js
+node demo/agent_travel_llm.js "Buy noise-cancelling earbuds under ₹2000"
+
+# Scripted happy path (legacy baseline)
 node demo/agent_travel.js
 
 # Failure: agent with ₹500 limit tries to buy ₹2,499 item
@@ -60,6 +66,8 @@ node demo/agent_budget_fail.js
 # Human review: order exceeds threshold, merchant approves
 node demo/agent_human_review.js
 ```
+
+The LLM demo requires `GROQ_API_KEY` in `.env`. Uses small models: `openai/gpt-oss-20b` → `llama-3.1-8b-instant`. Override with `GROQ_AGENT_MODEL`.
 
 ---
 

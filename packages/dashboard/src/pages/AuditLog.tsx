@@ -67,26 +67,26 @@ export default function AuditLog() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full neural-bg grid-mesh">
+      <div className="flex items-center justify-center h-full grid-mesh">
         <div className="text-center animate-fade-up">
-          <div className="w-14 h-14 mx-auto mb-4 border border-green-primary/20 rounded flex items-center justify-center bg-green-primary/5 glow-green">
-            <ScrollText size={22} className="text-green-primary" />
+          <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
+            <ScrollText size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-white tracking-widest mb-2">AUDIT_LOG_EXPLORER</h2>
-          <p className="text-xs text-gray-mid font-mono">Set your Merchant ID in the sidebar panel.</p>
+          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">AUDIT_LOG_EXPLORER</h2>
+          <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-bg-base">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-bg-border">
+      <div className="px-6 py-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <ScrollText size={15} className="text-green-primary" />
-            <h1 className="text-sm font-bold text-white tracking-widest">AUDIT_LOG_EXPLORER</h1>
+            <ScrollText size={15} className="text-foreground" />
+            <h1 className="text-sm font-bold text-foreground tracking-widest">AUDIT_LOG_EXPLORER</h1>
             <span className="badge badge-neutral ml-1">{total} ENTRIES</span>
           </div>
           <button id="export-csv" onClick={exportCsv} className="btn-ghost text-[10px]">
@@ -97,7 +97,7 @@ export default function AuditLog() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
-          <Filter size={11} className="text-gray-mid shrink-0" />
+          <Filter size={11} className="text-muted-foreground shrink-0" />
           <select
             id="filter-action"
             value={filters.action}
@@ -126,7 +126,7 @@ export default function AuditLog() {
             onChange={(e) => setFilters({ ...filters, from: e.target.value })}
           />
 
-          <label className="flex items-center gap-1.5 text-[10px] text-gray-mid cursor-pointer font-mono">
+          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer font-mono">
             <input
               id="filter-policy-failed"
               type="checkbox"
@@ -146,16 +146,16 @@ export default function AuditLog() {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         {logs.length === 0 ? (
-          <div className="flex items-center justify-center h-40 text-gray-mid">
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
             <div className="text-center">
-              <Activity size={24} className="mx-auto mb-2 text-gray-mid/40" />
+              <Activity size={24} className="mx-auto mb-2 text-muted-foreground/40" />
               <p className="text-xs font-mono">NO_ENTRIES_MATCH_FILTERS</p>
             </div>
           </div>
         ) : (
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-bg-surface/95 backdrop-blur-sm border-b border-bg-border z-10">
-              <tr className="text-[9px] text-gray-mid font-medium tracking-widest">
+            <thead className="sticky top-0 bg-card/95 backdrop-blur-sm border-b border-border z-10">
+              <tr className="text-[9px] text-muted-foreground font-medium tracking-widest">
                 <th className="text-left px-5 py-2.5">TIMESTAMP</th>
                 <th className="text-left px-3 py-2.5">AGENT_ID</th>
                 <th className="text-left px-3 py-2.5">ACTION</th>
@@ -172,22 +172,22 @@ export default function AuditLog() {
                   onClick={() => setSelected(log)}
                   className="table-row"
                 >
-                  <td className="px-5 py-2.5 text-gray-mid font-mono whitespace-nowrap">
+                  <td className="px-5 py-2.5 text-muted-foreground font-mono whitespace-nowrap">
                     {new Date(log.timestamp).toLocaleString('en-US', { hour12: false })}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-[10px] text-blue-electric/70 max-w-[100px] truncate">
+                  <td className="px-3 py-2.5 font-mono text-[10px] text-blue-600/70 max-w-[100px] truncate">
                     {log.agent_id ? log.agent_id.split('_').pop()?.slice(0, 10) : '—'}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-gray-cold tracking-wide">
+                  <td className="px-3 py-2.5 font-mono text-foreground/80 tracking-wide">
                     {log.action.replace(/_/g, '_')}
                   </td>
                   <td className="px-3 py-2.5"><StatusBadge status={log.action} /></td>
-                  <td className="px-3 py-2.5 text-gray-mid max-w-[240px] truncate font-mono italic">
+                  <td className="px-3 py-2.5 text-muted-foreground max-w-[240px] truncate font-mono italic">
                     {log.error
                       ? <span className="text-status-blocked not-italic">{log.error}</span>
                       : log.reasoning ? `"${log.reasoning.slice(0, 65)}..."` : '—'}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-gray-mid/50 font-mono">
+                  <td className="px-3 py-2.5 text-right text-muted-foreground/50 font-mono">
                     {log.duration_ms ?? '—'}
                   </td>
                 </tr>
@@ -199,8 +199,8 @@ export default function AuditLog() {
 
       {/* Pagination */}
       {total > PAGE_SIZE && (
-        <div className="px-6 py-3 border-t border-bg-border flex items-center justify-between">
-          <span className="text-[10px] text-gray-mid font-mono">
+        <div className="px-6 py-3 border-t border-border flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground font-mono">
             SHOWING {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} OF {total}
           </span>
           <div className="flex gap-2">

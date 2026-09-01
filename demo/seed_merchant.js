@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * AISLE Demo Seed Script
- * Seeds 2 demo merchants + catalogs into the DB.
+ * Seeds 3 demo merchants + catalogs into the DB.
  *
  * Usage: node demo/seed_merchant.js
  */
@@ -145,12 +145,73 @@ const TRAVELESSENTIALS = {
   ],
 };
 
+const CONNECTHUB = {
+  razorpay_key_id: process.env.RAZORPAY_KEY_ID,
+  razorpay_key_secret: process.env.RAZORPAY_KEY_SECRET,
+  store_name: 'ConnectHub',
+  description: 'Budget connectivity gear for travellers who want reliable 4G without breaking the bank',
+  policies: {
+    max_order_value: 8000,
+    human_review_above: 2500,
+    allowed_agent_types: ['travel', 'shopping'],
+    discount_cap_percent: 8,
+    daily_ai_gmv_cap: 25000,
+  },
+  catalog: [
+    {
+      sku: 'WIFI-BUDGET-4G',
+      data: {
+        name: 'ConnectHub Budget 4G Hotspot',
+        description: 'Affordable 4G hotspot for light travel. 100Mbps, 5 devices, 3hr battery — cheapest WiFi option.',
+        price_inr: 1899,
+        inventory: 31,
+        categories: ['electronics', 'travel', 'connectivity'],
+        attributes: {
+          weight_g: 110,
+          battery_hours: 3,
+          max_devices: 5,
+          connectivity: '4G LTE',
+          speed_mbps: 100,
+        },
+        tags: ['portable', 'travel', 'wifi', 'budget', '4g', 'hotspot'],
+      },
+      in_stock: true,
+    },
+    {
+      sku: 'SIM-TRAVEL-PREPAID',
+      data: {
+        name: 'Travel Prepaid SIM Kit',
+        description: 'Prepaid data SIM with 20GB for 30 days. Works across India.',
+        price_inr: 499,
+        inventory: 80,
+        categories: ['travel', 'connectivity', 'accessories'],
+        attributes: { data_gb: 20, validity_days: 30, network: 'Multi-carrier' },
+        tags: ['sim', 'data', 'travel', 'prepaid'],
+      },
+      in_stock: true,
+    },
+    {
+      sku: 'CABLE-USBC-2M',
+      data: {
+        name: 'USB-C Braided Cable 2m',
+        description: 'Fast-charge USB-C cable, nylon braided, 2 metre length.',
+        price_inr: 349,
+        inventory: 45,
+        categories: ['electronics', 'accessories'],
+        attributes: { length_m: 2, connector: 'USB-C', braided: true },
+        tags: ['cable', 'usb-c', 'charger'],
+      },
+      in_stock: true,
+    },
+  ],
+};
+
 async function seed() {
   console.log('\n🌱 AISLE Demo Seed Script\n');
   console.log('Seeding merchants into:', BASE_URL);
   console.log('');
 
-  for (const merchant of [GADGETNEST, TRAVELESSENTIALS]) {
+  for (const merchant of [GADGETNEST, TRAVELESSENTIALS, CONNECTHUB]) {
     try {
       const res = await fetch(`${BASE_URL}/merchants/register`, {
         method: 'POST',
@@ -181,7 +242,8 @@ async function seed() {
 
   console.log('✅ Seeding complete!');
   console.log('\nNext steps:');
-  console.log('  node demo/agent_travel.js       — Full happy-path demo');
+  console.log('  node demo/agent_travel_llm.js   — LLM tool-calling agent (recommended)');
+  console.log('  node demo/agent_travel.js       — Scripted happy-path demo');
   console.log('  node demo/agent_budget_fail.js  — Budget cap failure demo');
   console.log('  node demo/agent_human_review.js — Human review flow demo\n');
 }

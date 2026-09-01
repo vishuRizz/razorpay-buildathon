@@ -17,12 +17,13 @@ interface KPI {
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#141414',
-  border: '1px solid #2A2A2A',
-  borderRadius: '6px',
-  fontFamily: 'Roboto Mono, monospace',
+  backgroundColor: '#ffffff',
+  border: '1px solid oklch(0.88 0.01 90)',
+  borderRadius: '12px',
+  fontFamily: 'JetBrains Mono, monospace',
   fontSize: '11px',
-  color: '#BDBDBD',
+  color: 'oklch(0.12 0.01 60)',
+  boxShadow: '0 4px 12px oklch(0 0 0 / 0.08)',
 };
 
 export default function Analytics() {
@@ -40,13 +41,13 @@ export default function Analytics() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full neural-bg grid-mesh">
+      <div className="flex items-center justify-center h-full grid-mesh">
         <div className="text-center animate-fade-up">
-          <div className="w-14 h-14 mx-auto mb-4 border border-green-primary/20 rounded flex items-center justify-center bg-green-primary/5 glow-green">
-            <BarChart3 size={22} className="text-green-primary" />
+          <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
+            <BarChart3 size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-white tracking-widest mb-2">ANALYTICS_ENGINE</h2>
-          <p className="text-xs text-gray-mid font-mono">Set your Merchant ID in the sidebar to load metrics.</p>
+          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">ANALYTICS_ENGINE</h2>
+          <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar to load metrics.</p>
         </div>
       </div>
     );
@@ -68,15 +69,15 @@ export default function Analytics() {
       label: 'AI_GMV_30D',
       value: `₹${gmv30dTotal.toLocaleString()}`,
       sub: 'Last 30 days',
-      color: 'text-green-primary',
-      icon: <TrendingUp size={14} className="text-green-primary" />,
+      color: 'text-foreground',
+      icon: <TrendingUp size={14} className="text-foreground" />,
     },
     {
       label: 'TOTAL_EVENTS',
       value: String(activity.reduce((s, a) => s + parseInt(a.count, 10), 0)),
       sub: 'All time',
-      color: 'text-white',
-      icon: <Zap size={14} className="text-blue-electric" />,
+      color: 'text-foreground',
+      icon: <Zap size={14} className="text-blue-600" />,
     },
     {
       label: 'CHECKOUTS',
@@ -95,22 +96,22 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="p-6 space-y-5 animate-fade-up bg-bg-base neural-bg min-h-full">
+    <div className="p-6 space-y-5 animate-fade-up bg-background min-h-full">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <BarChart3 size={16} className="text-green-primary" />
-        <h1 className="text-sm font-bold text-white tracking-widest">ANALYTICS_ENGINE</h1>
-        {loading && <span className="text-[9px] text-gray-mid tracking-widest animate-pulse ml-2">LOADING...</span>}
+        <BarChart3 size={16} className="text-foreground" />
+        <h1 className="text-sm font-bold text-foreground tracking-widest">ANALYTICS_ENGINE</h1>
+        {loading && <span className="text-[9px] text-muted-foreground tracking-widest animate-pulse ml-2">LOADING...</span>}
       </div>
 
       {/* Ticker */}
       {activity.length > 0 && (
-        <div className="overflow-hidden border border-bg-border rounded bg-bg-surface py-1.5 relative">
+        <div className="overflow-hidden border border-border rounded bg-card py-1.5 relative">
           <div className="ticker-inner">
             {[...activity, ...activity].map((a, i) => (
-              <span key={i} className="text-[10px] font-mono text-gray-mid px-6 whitespace-nowrap">
-                <span className="text-green-primary">{a.action}</span>
-                <span className="text-gray-mid/40 mx-2">·</span>
+              <span key={i} className="text-[10px] font-mono text-muted-foreground px-6 whitespace-nowrap">
+                <span className="text-foreground">{a.action}</span>
+                <span className="text-muted-foreground/40 mx-2">·</span>
                 {a.count} events
               </span>
             ))}
@@ -123,17 +124,17 @@ export default function Analytics() {
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className="card border-glow relative overflow-hidden"
+            className="card  relative overflow-hidden"
             id={`kpi-${kpi.label.toLowerCase()}`}
           >
             {/* Subtle corner accent */}
             <div className="absolute top-0 right-0 w-12 h-12 bg-green-primary/3 rounded-bl-full" />
             <div className="flex items-start justify-between mb-2">
-              <div className="text-[9px] text-gray-mid tracking-widest">{kpi.label}</div>
+              <div className="text-[9px] text-muted-foreground tracking-widest">{kpi.label}</div>
               {kpi.icon}
             </div>
             <div className={`text-2xl font-bold font-mono ${kpi.color} leading-none mb-1`}>{kpi.value}</div>
-            <div className="text-[10px] text-gray-mid">{kpi.sub}</div>
+            <div className="text-[10px] text-muted-foreground">{kpi.sub}</div>
           </div>
         ))}
       </div>
@@ -141,13 +142,13 @@ export default function Analytics() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-3 gap-3">
         {/* GMV Area Chart */}
-        <div className="card col-span-2 border-glow">
+        <div className="card col-span-2 ">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[10px] font-medium text-gray-cold tracking-widest">AI_DRIVEN_GMV · 7D</h2>
+            <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest">AI_DRIVEN_GMV · 7D</h2>
             <span className="badge badge-info">LINE_CHART</span>
           </div>
           {gmv7d.length === 0 ? (
-            <div className="flex items-center justify-center h-36 text-gray-mid/40 text-xs font-mono">NO_DATA_YET</div>
+            <div className="flex items-center justify-center h-36 text-muted-foreground/40 text-xs font-mono">NO_DATA_YET</div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={gmv7d.map((d) => ({ ...d, gmv: parseInt(d.gmv, 10) }))}>
@@ -168,10 +169,10 @@ export default function Analytics() {
         </div>
 
         {/* Policy Pie */}
-        <div className="card border-glow">
-          <h2 className="text-[10px] font-medium text-gray-cold tracking-widest mb-4">POLICY_OUTCOMES</h2>
+        <div className="card ">
+          <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest mb-4">POLICY_OUTCOMES</h2>
           {pieData.length === 0 ? (
-            <div className="flex items-center justify-center h-36 text-gray-mid/40 text-xs font-mono">NO_DATA_YET</div>
+            <div className="flex items-center justify-center h-36 text-muted-foreground/40 text-xs font-mono">NO_DATA_YET</div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
@@ -204,10 +205,10 @@ export default function Analytics() {
       {/* Charts row 2 */}
       <div className="grid grid-cols-2 gap-3">
         {/* Activity Bar Chart */}
-        <div className="card border-glow">
-          <h2 className="text-[10px] font-medium text-gray-cold tracking-widest mb-4">ACTIVITY_BY_ACTION</h2>
+        <div className="card ">
+          <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest mb-4">ACTIVITY_BY_ACTION</h2>
           {activity.length === 0 ? (
-            <div className="flex items-center justify-center h-36 text-gray-mid/40 text-xs font-mono">NO_DATA_YET</div>
+            <div className="flex items-center justify-center h-36 text-muted-foreground/40 text-xs font-mono">NO_DATA_YET</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={activity.slice(0, 8).map((a) => ({ ...a, count: parseInt(a.count, 10) }))}>
@@ -222,20 +223,20 @@ export default function Analytics() {
         </div>
 
         {/* Top Products */}
-        <div className="card border-glow">
-          <h2 className="text-[10px] font-medium text-gray-cold tracking-widest mb-4">TOP_PRODUCTS_AI</h2>
+        <div className="card ">
+          <h2 className="text-[10px] font-medium text-foreground/80 tracking-widest mb-4">TOP_PRODUCTS_AI</h2>
           {topProducts.length === 0 ? (
-            <div className="flex items-center justify-center h-36 text-gray-mid/40 text-xs font-mono">NO_COMPLETED_ORDERS</div>
+            <div className="flex items-center justify-center h-36 text-muted-foreground/40 text-xs font-mono">NO_COMPLETED_ORDERS</div>
           ) : (
             <div className="space-y-3">
               {topProducts.slice(0, 6).map((p, i) => {
                 const pct = Math.min(100, (parseInt(p.count, 10) / parseInt(topProducts[0].count, 10)) * 100);
                 return (
                   <div key={i} className="flex items-center gap-2.5">
-                    <span className="text-[10px] text-gray-mid/50 font-mono w-3 text-center">{i + 1}</span>
+                    <span className="text-[10px] text-muted-foreground/50 font-mono w-3 text-center">{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-gray-cold font-mono truncate mb-1">{p.name ?? p.sku}</div>
-                      <div className="h-1 bg-bg-border rounded-full overflow-hidden">
+                      <div className="text-xs text-foreground/80 font-mono truncate mb-1">{p.name ?? p.sku}</div>
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-green-primary rounded-full transition-all duration-700"
                           style={{ width: `${pct}%` }}
@@ -243,8 +244,8 @@ export default function Analytics() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-[10px] text-green-primary font-mono">₹{parseInt(p.revenue, 10).toLocaleString()}</div>
-                      <div className="text-[9px] text-gray-mid">{p.count} orders</div>
+                      <div className="text-[10px] text-foreground font-mono">₹{parseInt(p.revenue, 10).toLocaleString()}</div>
+                      <div className="text-[9px] text-muted-foreground">{p.count} orders</div>
                     </div>
                   </div>
                 );
