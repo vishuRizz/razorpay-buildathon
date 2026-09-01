@@ -161,13 +161,13 @@ export default function LiveFeed() {
 
   if (!merchantId) {
     return (
-      <div className="flex items-center justify-center h-full grid-mesh">
-        <div className="text-center animate-fade-up">
-          <div className="w-14 h-14 mx-auto mb-4 border border-foreground/10 rounded flex items-center justify-center bg-green-primary/5 ">
+      <div className="empty-state">
+        <div className="empty-state-inner">
+          <div className="empty-state-icon">
             <Zap size={22} className="text-foreground" />
           </div>
-          <h2 className="text-sm font-bold text-foreground tracking-widest mb-2">AWAITING_MERCHANT_ID</h2>
-          <p className="text-xs text-muted-foreground font-mono">Set your Merchant ID in the sidebar panel to begin monitoring.</p>
+          <h2 className="text-lg font-display text-foreground mb-2">Awaiting Merchant ID</h2>
+          <p className="text-sm text-muted-foreground">Set your Merchant ID in the sidebar to begin monitoring.</p>
         </div>
       </div>
     );
@@ -175,14 +175,16 @@ export default function LiveFeed() {
 
   return (
     <>
-      <div className="h-full flex flex-col bg-background neural-bg">
-        {/* Header */}
-      <div className="px-6 py-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Zap size={16} className="text-foreground" />
-              <h1 className="text-sm font-bold text-foreground tracking-widest">LIVE_AGENT_FEED</h1>
+      <div className="h-full flex flex-col bg-background">
+        <div className="px-6 lg:px-8 py-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-2">
+                <span className="w-8 h-px bg-foreground/30" />
+                Live Monitor
+              </span>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-display text-foreground">Live Feed</h1>
               {isLive && (
                 <div className="flex items-center gap-1 ml-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-circuit live-dot" />

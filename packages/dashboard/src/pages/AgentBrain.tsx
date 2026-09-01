@@ -203,40 +203,32 @@ export default function AgentBrain() {
 
   return (
     <div className="min-h-full bg-background">
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed top-0 right-0 w-[480px] h-[480px] bg-green-50 blur-[120px] rounded-full" />
-      <div className="pointer-events-none fixed bottom-0 left-48 w-[320px] h-[320px]  blur-[100px] rounded-full" />
-
-      <div className="relative p-6 max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <div className="p-2 rounded-lg bg-foreground/5 border border-foreground/10">
-                <Brain size={20} className="text-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground tracking-wide leading-none">Agent Brain</h1>
-                <p className="text-[10px] text-muted-foreground mt-1 tracking-widest">AUTONOMOUS BUYER · LIVE TRACE</p>
-              </div>
-              {session?.status === 'running' && (
-                <span className="flex items-center gap-1.5 text-[10px] text-green-600 bg-foreground/5 px-2.5 py-1 rounded-full border border-foreground/15 ml-1">
-                  <Radio size={10} className="live-dot" /> LIVE
-                </span>
-              )}
+      <div className="relative p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+        <PageHeader
+          eyebrow="Autonomous Buyer"
+          title="Agent Brain"
+          subtitle="Razorpay's agent-commerce layer — NPCI UAP / ACP aligned. Launch a buyer, watch it discover stores, compare WiFi options, pass policy, and checkout."
+          icon={
+            <div className="p-2.5 rounded-xl bg-foreground/5 border border-foreground/10">
+              <Brain size={22} className="text-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
-              Razorpay&apos;s agent-commerce layer — NPCI UAP / ACP aligned. Launch a buyer, watch it
-              discover stores, compare WiFi options, pass policy, and checkout. No terminal.
-            </p>
-          </div>
-          <div className="glass px-4 py-3 text-right shrink-0">
-            <div className={`text-sm font-bold ${st.className}`}>{st.text}</div>
-            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-              {session?.session_id ?? '—'}
+          }
+          badge={
+            session?.status === 'running' ? (
+              <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                <Radio size={10} className="live-dot" /> Live
+              </span>
+            ) : undefined
+          }
+          actions={
+            <div className="glass px-4 py-3 text-right">
+              <div className={`text-sm font-semibold font-mono ${st.className}`}>{st.text}</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                {session?.session_id?.slice(0, 16) ?? '—'}
+              </div>
             </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* Pipeline */}
         <div className="card py-4 px-5 overflow-x-auto">

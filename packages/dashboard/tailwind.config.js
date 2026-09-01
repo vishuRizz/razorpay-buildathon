@@ -29,6 +29,11 @@ export default {
           DEFAULT: 'var(--card)',
           foreground: 'var(--card-foreground)',
         },
+        status: {
+          approved: 'var(--status-approved)',
+          pending: 'var(--status-pending)',
+          blocked: 'var(--status-blocked)',
+        },
         // Deep Learning High-Tech palette from design.md
         bg: {
           base: '#0D0D0D',       // Preto Profundo
@@ -59,8 +64,9 @@ export default {
         },
       },
       fontFamily: {
-        mono: ['Roboto Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
-        sans: ['Roboto Mono', 'system-ui', 'sans-serif'],
+        sans: ['Instrument Sans', 'system-ui', 'sans-serif'],
+        display: ['Instrument Serif', 'Georgia', 'serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
