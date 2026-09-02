@@ -213,5 +213,20 @@ export async function getMerchantAnalytics(merchantId: string) {
     activity_by_action: ordersByAction,
     top_products: topProducts,
     policy_outcome_distribution: policyStats,
+    ai_upsell_recovered_inr: await getUpsellRecoveredInr(merchantId),
   };
+}
+
+/**
+ * Sum revenue from upsell items accepted (UPSELL_ACCEPTED audit events).
+ */
+async function getUpsellRecoveredInr(merchantId: string): Promise<number> {
+  const rows = await dbQuery<{ total: string }>(
+    `SELECT COALESCE(SUM((output->>'estimated_lift_inr')::int), 0) as total
+     FROM audit_log
+     WHERE merchant_id = $1 AND action = 'UPSELL_ACCEPTED'
+       AND timestamp >= NOW() - INTERVAL '7 days'`,
+    [merchantId]
+  );
+  return parseInt(rows[0]?.total ?? '0', 10);
 }

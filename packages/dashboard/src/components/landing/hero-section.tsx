@@ -23,7 +23,7 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] lg:w-[800px] lg:h-[800px] opacity-40 pointer-events-none">
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[380px] h-[380px] lg:w-[520px] lg:h-[520px] opacity-35 pointer-events-none">
         <AnimatedSphere />
       </div>
       
@@ -51,11 +51,11 @@ export function HeroSection() {
           }`}
         >
           <img 
-            src="/placeholder.svg" 
+            src="/logo.png" 
             alt="AISLE" 
             width={64} 
             height={64} 
-            className="rounded-full object-cover border border-foreground/10"
+            className="h-16 w-16 object-contain"
           />
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground">
             <span className="w-8 h-px bg-foreground/30" />

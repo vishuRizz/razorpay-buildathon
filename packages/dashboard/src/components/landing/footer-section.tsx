@@ -17,13 +17,10 @@ export function FooterSection() {
         <div className="py-16 lg:py-24 flex flex-col items-center text-center">
           <a href="#" className="flex flex-col items-center gap-4 mb-6">
             <img 
-              src="/placeholder.svg" 
+              src="/logo-withtext.png" 
               alt="AISLE" 
-              width={80} 
-              height={80} 
-              className="rounded-full object-cover border border-foreground/10"
+              className="h-14 object-contain"
             />
-            <span className="text-3xl font-display mt-2">AISLE</span>
           </a>
 
           <p className="text-xl text-muted-foreground leading-relaxed mb-8 max-w-md">

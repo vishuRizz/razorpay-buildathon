@@ -6,7 +6,7 @@ import {
   Area, AreaChart,
 } from 'recharts';
 import { useApp } from '../App';
-import { TrendingUp, Zap, CheckCircle2, ShieldOff, BarChart3 } from 'lucide-react';
+import { TrendingUp, Zap, CheckCircle2, ShieldOff, BarChart3, Sparkles } from 'lucide-react';
 
 interface KPI {
   label: string;
@@ -57,6 +57,7 @@ export default function Analytics() {
   const topProducts = (data?.top_products as { sku?: string; name?: string; count: string; revenue: string }[]) ?? [];
   const policyDist = (data?.policy_outcome_distribution as { approved: string; count: string }[]) ?? [];
   const gmv30dTotal = (data?.gmv_30d_total as number) ?? 0;
+  const upsellRecovered = (data?.ai_upsell_recovered_inr as number) ?? 0;
   const activity = (data?.activity_by_action as { action: string; count: string }[]) ?? [];
 
   const pieData = policyDist.map((p) => ({
@@ -85,6 +86,13 @@ export default function Analytics() {
       sub: 'Completed orders',
       color: 'text-status-approved',
       icon: <CheckCircle2 size={14} className="text-status-approved" />,
+    },
+    {
+      label: 'AI_UPSELL_7D',
+      value: `₹${upsellRecovered.toLocaleString()}`,
+      sub: 'Recovered via upsell agent',
+      color: 'text-foreground',
+      icon: <Sparkles size={14} className="text-green-primary" />,
     },
     {
       label: 'POLICY_BLOCKS',
@@ -120,7 +128,7 @@ export default function Analytics() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}

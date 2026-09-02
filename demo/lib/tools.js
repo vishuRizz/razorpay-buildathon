@@ -63,7 +63,12 @@ const TOOL_DEFINITIONS = [
             description: 'Set to "true" to only see in-stock items',
           },
           max_price: { type: 'integer', description: 'Maximum price in INR' },
-          q: { type: 'string', description: 'Keyword search on name, description, tags' },
+          q: { type: 'string', description: 'Natural language search — e.g. "lightweight 4G hotspot for beach trip"' },
+          search_mode: {
+            type: 'string',
+            enum: ['keyword', 'semantic', 'hybrid'],
+            description: 'Default hybrid when q is set',
+          },
         },
         required: ['store_id'],
       },
@@ -128,6 +133,62 @@ const TOOL_DEFINITIONS = [
   {
     type: 'function',
     function: {
+      name: 'suggest_upsell',
+      description:
+        'Get merchant growth upsell suggestions for items in cart (e.g. travel adapter with WiFi). Call after create_cart if suggested_items returned.',
+      parameters: {
+        type: 'object',
+        properties: {
+          store_id: { type: 'string' },
+          cart_skus: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'SKUs currently in cart',
+          },
+        },
+        required: ['store_id', 'cart_skus'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'accept_upsell',
+      description:
+        'Add a suggested upsell item to an existing cart. Increases merchant revenue — use when upsell fits the user task.',
+      parameters: {
+        type: 'object',
+        properties: {
+          store_id: { type: 'string' },
+          cart_id: { type: 'string' },
+          sku: { type: 'string' },
+          quantity: { type: 'integer', minimum: 1, default: 1 },
+        },
+        required: ['store_id', 'cart_id', 'sku'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'negotiate_discount',
+      description:
+        'Negotiate a discount with the merchant. Auto-applies coupon if within discount_cap_percent from store manifest. Try before checkout on larger orders.',
+      parameters: {
+        type: 'object',
+        properties: {
+          store_id: { type: 'string' },
+          cart_id: { type: 'string' },
+          requested_discount_percent: { type: 'number', minimum: 0, maximum: 100 },
+          agent_reasoning: { type: 'string' },
+        },
+        required: ['store_id', 'cart_id', 'requested_discount_percent'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'check_order_status',
       description: 'Poll order status after checkout (CREATED, PAID, PENDING_REVIEW, etc.)',
       parameters: {
@@ -146,6 +207,10 @@ const TOOL_DEFINITIONS = [
 function normalizeToolArgs(args) {
   const out = { ...args };
   if (out.max_price != null) out.max_price = Number(out.max_price);
+  if (out.requested_discount_percent != null) {
+    out.requested_discount_percent = Number(out.requested_discount_percent);
+  }
+  if (out.quantity != null) out.quantity = Number(out.quantity);
   if (Array.isArray(out.items)) {
     out.items = out.items.map((item) => ({
       ...item,
@@ -196,6 +261,7 @@ async function executeTool(name, rawArgs, ctx) {
         in_stock: args.in_stock,
         max_price: args.max_price,
         q: args.q,
+        search_mode: args.search_mode,
       });
       const { data, duration_ms } = await aisleRequest(
         'GET',
@@ -214,6 +280,43 @@ async function executeTool(name, rawArgs, ctx) {
           body: {
             items: args.items,
             agent_task: args.agent_task,
+          },
+        }
+      );
+      return { ok: true, duration_ms, ...data };
+    }
+
+    case 'suggest_upsell': {
+      const skus = (args.cart_skus ?? []).join(',');
+      const { data, duration_ms } = await aisleRequest(
+        'GET',
+        `/stores/${args.store_id}/catalog/upsell?cart_skus=${encodeURIComponent(skus)}`,
+        { token }
+      );
+      return { ok: true, duration_ms, ...data };
+    }
+
+    case 'accept_upsell': {
+      const { data, duration_ms } = await aisleRequest(
+        'POST',
+        `/stores/${args.store_id}/cart/${args.cart_id}/accept-upsell`,
+        {
+          token,
+          body: { sku: args.sku, quantity: args.quantity ?? 1 },
+        }
+      );
+      return { ok: true, duration_ms, ...data };
+    }
+
+    case 'negotiate_discount': {
+      const { data, duration_ms } = await aisleRequest(
+        'POST',
+        `/stores/${args.store_id}/cart/${args.cart_id}/negotiate`,
+        {
+          token,
+          body: {
+            requested_discount_percent: args.requested_discount_percent,
+            agent_reasoning: args.agent_reasoning,
           },
         }
       );

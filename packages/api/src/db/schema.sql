@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS agents (
   owner_email         TEXT        NOT NULL,
   constraints         JSONB       NOT NULL,
   revoked             BOOLEAN     NOT NULL DEFAULT false,
+  reputation_score    INTEGER     NOT NULL DEFAULT 80,
   daily_spend_inr     INTEGER     NOT NULL DEFAULT 0,
   daily_spend_reset   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -49,15 +50,26 @@ CREATE TABLE IF NOT EXISTS agents (
 -- Carts
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS carts (
-  id          TEXT        PRIMARY KEY,
-  agent_id    TEXT        REFERENCES agents(id),
-  merchant_id TEXT        REFERENCES merchants(id),
-  items       JSONB       NOT NULL DEFAULT '[]',
-  subtotal_inr INTEGER    NOT NULL DEFAULT 0,
-  status      TEXT        NOT NULL DEFAULT 'ACTIVE',
+  id               TEXT        PRIMARY KEY,
+  agent_id         TEXT        REFERENCES agents(id),
+  merchant_id      TEXT        REFERENCES merchants(id),
+  items            JSONB       NOT NULL DEFAULT '[]',
+  subtotal_inr     INTEGER     NOT NULL DEFAULT 0,
+  discount_inr     INTEGER     NOT NULL DEFAULT 0,
+  discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
+  final_amount_inr INTEGER,
+  coupon_code      TEXT,
+  status           TEXT        NOT NULL DEFAULT 'ACTIVE',
   -- ACTIVE | CHECKED_OUT | ABANDONED | CHECKOUT_FAILED
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Tier 2 migrations (safe to re-run)
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS reputation_score INTEGER NOT NULL DEFAULT 80;
+ALTER TABLE carts ADD COLUMN IF NOT EXISTS discount_inr INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE carts ADD COLUMN IF NOT EXISTS discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0;
+ALTER TABLE carts ADD COLUMN IF NOT EXISTS final_amount_inr INTEGER;
+ALTER TABLE carts ADD COLUMN IF NOT EXISTS coupon_code TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_carts_agent    ON carts(agent_id);
 CREATE INDEX IF NOT EXISTS idx_carts_merchant ON carts(merchant_id);

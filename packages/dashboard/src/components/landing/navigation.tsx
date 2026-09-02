@@ -44,7 +44,11 @@ export function Navigation() {
           }`}
         >
           <a href="#" className="flex items-center gap-2 group">
-            <span className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-xl" : "text-2xl"}`}>AISLE</span>
+            <img
+              src="/logo-withtext.png"
+              alt="AISLE"
+              className={`object-contain transition-all duration-500 ${isScrolled ? "h-7" : "h-9"}`}
+            />
           </a>
 
           <div className="hidden md:flex items-center gap-12">

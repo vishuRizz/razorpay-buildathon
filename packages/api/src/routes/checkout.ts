@@ -57,13 +57,17 @@ router.post(
 
     // Re-run Policy Engine at checkout (defense in depth)
     const cartItems = cart.items as CartItem[];
+    const chargeAmount = cart.final_amount_inr ?? cart.subtotal_inr;
+    const discountPercent = Number(cart.discount_percent ?? 0);
+
     const policyResult = await policyEngine.evaluate({
       cartItems,
-      cartTotal: cart.subtotal_inr,
+      cartTotal: chargeAmount,
       agent,
       merchantId: storeId,
       merchantPolicies: merchant.policies as Merchant['policies'],
       merchantAiBuyersEnabled: merchant.ai_buyers_enabled,
+      discountPercent,
     });
 
     if (!policyResult.approved) {
@@ -98,7 +102,7 @@ router.post(
       await query(
         `INSERT INTO orders (id, cart_id, merchant_id, agent_id, amount_inr, status)
          VALUES ($1, $2, $3, $4, $5, 'PENDING_REVIEW')`,
-        [orderId, cartId, storeId, agent.agent_id, cart.subtotal_inr]
+        [orderId, cartId, storeId, agent.agent_id, chargeAmount]
       );
 
       await query(`UPDATE carts SET status = 'CHECKED_OUT' WHERE id = $1`, [cartId]);
@@ -108,7 +112,7 @@ router.post(
         merchant_id: storeId,
         action: 'HUMAN_REVIEW_REQUESTED',
         input: body,
-        output: { order_id: orderId, amount_inr: cart.subtotal_inr },
+        output: { order_id: orderId, amount_inr: chargeAmount },
         policy_result: policyResult,
         duration_ms: Date.now() - start,
       });
@@ -116,7 +120,7 @@ router.post(
       res.status(202).json({
         order_id: orderId,
         status: 'PENDING_REVIEW',
-        amount_inr: cart.subtotal_inr,
+        amount_inr: chargeAmount,
         message: 'Order requires merchant approval. Poll /orders/:id/status for updates.',
         poll_url: `/v1/stores/${storeId}/orders/${orderId}/status`,
         audit_log_id: logId,
@@ -128,7 +132,7 @@ router.post(
     let rzpOrder;
     try {
       rzpOrder = await createRazorpayOrder(
-        cart.subtotal_inr * 100, // convert to paise
+        chargeAmount * 100, // convert to paise
         orderId,
         {
           aisle_order_id: orderId,
@@ -141,7 +145,7 @@ router.post(
       await query(
         `INSERT INTO orders (id, cart_id, merchant_id, agent_id, amount_inr, status)
          VALUES ($1, $2, $3, $4, $5, 'FAILED')`,
-        [orderId, cartId, storeId, agent.agent_id, cart.subtotal_inr]
+        [orderId, cartId, storeId, agent.agent_id, chargeAmount]
       );
       await query(`UPDATE carts SET status = 'CHECKOUT_FAILED' WHERE id = $1`, [cartId]);
 
@@ -180,7 +184,7 @@ router.post(
     await query(
       `INSERT INTO orders (id, cart_id, merchant_id, agent_id, razorpay_order_id, amount_inr, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'CREATED')`,
-      [orderId, cartId, storeId, agent.agent_id, rzpOrder.id, cart.subtotal_inr]
+      [orderId, cartId, storeId, agent.agent_id, rzpOrder.id, chargeAmount]
     );
 
     await query(`UPDATE carts SET status = 'CHECKED_OUT' WHERE id = $1`, [cartId]);
@@ -194,7 +198,7 @@ router.post(
          END,
          daily_spend_reset = NOW()
        WHERE id = $2`,
-      [cart.subtotal_inr, agent.agent_id]
+      [chargeAmount, agent.agent_id]
     );
 
     const logId = await logAudit({
@@ -205,7 +209,7 @@ router.post(
       output: {
         order_id: orderId,
         razorpay_order_id: rzpOrder.id,
-        amount_inr: cart.subtotal_inr,
+        amount_inr: chargeAmount,
       },
       reasoning,
       policy_result: policyResult,
@@ -215,7 +219,10 @@ router.post(
     res.status(201).json({
       order_id: orderId,
       razorpay_order_id: rzpOrder.id,
-      amount_inr: cart.subtotal_inr,
+      amount_inr: chargeAmount,
+      subtotal_inr: cart.subtotal_inr,
+      discount_inr: cart.discount_inr ?? 0,
+      coupon_code: cart.coupon_code,
       status: 'CREATED',
       reasoning,
       audit_log_id: logId,

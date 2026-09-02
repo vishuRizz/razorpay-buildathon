@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,dashboard -c cyan,magenta \"pnpm --filter @aisle/api dev\" \"pnpm --filter @aisle/dashboard dev\"",
-    "build": "pnpm --filter @aisle/api build && pnpm --filter @aisle/dashboard build",
+    "build": "pnpm --filter @aisle/api build && pnpm --filter @aisle/dashboard build && pnpm --filter @aisle/mcp-server build",
+    "mcp": "pnpm --filter @aisle/mcp-server dev",
     "db:migrate": "pnpm --filter @aisle/api db:migrate",
     "seed": "pnpm --filter @aisle/api seed",
     "test": "pnpm --filter @aisle/api test"

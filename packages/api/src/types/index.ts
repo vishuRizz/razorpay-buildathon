@@ -80,6 +80,10 @@ export interface Cart {
   merchant_id: string;
   items: CartItem[];
   subtotal_inr: number;
+  discount_inr?: number;
+  discount_percent?: number;
+  final_amount_inr?: number;
+  coupon_code?: string;
   status: CartStatus;
   created_at: string;
 }
@@ -139,7 +143,10 @@ export type AuditAction =
   | 'AGENT_ERROR'
   | 'HUMAN_REVIEW_REQUESTED'
   | 'HUMAN_REVIEW_APPROVED'
-  | 'HUMAN_REVIEW_REJECTED';
+  | 'HUMAN_REVIEW_REJECTED'
+  | 'UPSELL_SUGGESTED'
+  | 'UPSELL_ACCEPTED'
+  | 'DISCOUNT_NEGOTIATED';
 
 export interface PolicyResult {
   approved: boolean;

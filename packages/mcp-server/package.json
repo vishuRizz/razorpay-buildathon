@@ -1,0 +1,24 @@
+{
+  "name": "@aisle/mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server exposing AISLE commerce tools for Cursor, Claude, and Codex agents",
+  "type": "module",
+  "bin": {
+    "aisle-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.3"
+  }
+}

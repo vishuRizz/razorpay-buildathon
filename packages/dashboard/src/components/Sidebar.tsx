@@ -22,10 +22,12 @@ export default function Sidebar() {
   return (
     <aside className="w-60 bg-card border-r border-border flex flex-col h-full shrink-0">
       <div className="px-5 pt-6 pb-5 border-b border-border">
-        <Link to="/" className="flex items-center gap-2 group">
-          <span className="font-display text-2xl tracking-tight text-foreground group-hover:opacity-80 transition-opacity">
-            AISLE
-          </span>
+        <Link to="/" className="block group">
+          <img
+            src="/logo-withtext.png"
+            alt="AISLE"
+            className="h-8 object-contain group-hover:opacity-80 transition-opacity"
+          />
         </Link>
         <p className="text-[10px] font-mono text-muted-foreground mt-1 tracking-wider">
           UAP · ACP · Track 01

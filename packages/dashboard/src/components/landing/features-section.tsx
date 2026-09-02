@@ -5,49 +5,49 @@ const features = [
     number: "01",
     title: "Agent Commerce API",
     description: "REST endpoints for store discovery, catalog search, cart, and Razorpay checkout — built for autonomous agents.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "02",
     title: "8-Rule Policy Engine",
     description: "Budget caps, velocity limits, category ACL, human-review thresholds, and merchant kill-switch before every payment.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "03",
     title: "Agent Identity Tokens",
     description: "Cryptographically scoped spending authority with session limits, category constraints, and full audit trail.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "04",
     title: "Multi-Store Discovery",
     description: "Agents compare catalogs across GadgetNest, ConnectHub, and more — structured JSON manifests, no HTML scraping.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "05",
     title: "Live Agent Brain",
     description: "Launch an LLM tool-calling agent from the dashboard — watch discover → compare → policy → checkout live.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "06",
     title: "Merchant Manifests",
     description: "Machine-readable store policies, catalog schemas, and AI-buyer settings at /v1/stores/:id/manifest.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "07",
     title: "Audit & Analytics",
     description: "Every agent action logged with reasoning, policy verdicts, and Razorpay order IDs — full merchant visibility.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
   {
     number: "08",
     title: "UAP / ACP Aligned",
     description: "Merchant-side layer complementing NPCI UAP and global agent-commerce protocols — Razorpay-native payments.",
-    image: "/placeholder.svg",
+    image: "/logo.png",
   },
 ];
 
@@ -92,11 +92,11 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
             </div>
             
             <div className="flex justify-center lg:justify-end">
-              <div className="w-full max-w-[320px] aspect-video relative overflow-hidden rounded-xl border border-foreground/10 group-hover:scale-105 transition-transform duration-700">
+              <div className="w-full max-w-[320px] aspect-video relative overflow-hidden rounded-xl border border-foreground/10 bg-muted/50 group-hover:scale-105 transition-transform duration-700 flex items-center justify-center p-8">
                 <img 
                   src={feature.image} 
                   alt={feature.title} 
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="max-h-full max-w-full object-contain opacity-80"
                 />
               </div>
             </div>

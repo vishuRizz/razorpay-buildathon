@@ -13,6 +13,7 @@ interface PolicyEngineInput {
   merchantId: string;
   merchantPolicies: MerchantPolicies;
   merchantAiBuyersEnabled: boolean;
+  discountPercent?: number;
 }
 
 export class PolicyEngine {
@@ -31,6 +32,7 @@ export class PolicyEngine {
       merchantId,
       merchantPolicies,
       merchantAiBuyersEnabled,
+      discountPercent = 0,
     } = input;
 
     // Reset state for fresh evaluation
@@ -83,8 +85,16 @@ export class PolicyEngine {
 
     // --- Rule 9: Merchant Daily GMV Cap ---
     await this.checkMerchantGMVCap(merchantId, cartTotal, merchantPolicies.daily_ai_gmv_cap);
+    if (this.block_reason) return this.buildResult(11);
 
-    return this.buildResult(9);
+    // --- Rule 10: Max Order Value ---
+    this.checkMaxOrderValue(cartTotal, merchantPolicies.max_order_value);
+    if (this.block_reason) return this.buildResult(11);
+
+    // --- Rule 11: Discount Cap (negotiated coupons) ---
+    this.checkDiscountCap(discountPercent, merchantPolicies.discount_cap_percent);
+
+    return this.buildResult(11);
   }
 
   // ----------------------------------------------------------------
@@ -312,6 +322,53 @@ export class PolicyEngine {
       );
     } else {
       this.pass('MERCHANT_GMV_CAP');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 10: Max Order Value
+  // ----------------------------------------------------------------
+  private checkMaxOrderValue(cartTotal: number, maxOrderValue?: number): void {
+    if (!maxOrderValue) {
+      this.pass('MAX_ORDER_VALUE');
+      return;
+    }
+    if (cartTotal > maxOrderValue) {
+      this.fail(
+        'MAX_ORDER_VALUE',
+        `Cart value ₹${cartTotal} exceeds merchant max order value of ₹${maxOrderValue}`,
+        'Remove items or split into multiple orders'
+      );
+    } else {
+      this.pass('MAX_ORDER_VALUE');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 11: Discount Cap — enforces negotiated coupon bounds
+  // ----------------------------------------------------------------
+  private checkDiscountCap(requestedPercent: number, capPercent?: number): void {
+    const cap = capPercent ?? 0;
+    if (requestedPercent <= 0) {
+      this.pass('DISCOUNT_CAP');
+      return;
+    }
+    if (cap <= 0) {
+      this.fail(
+        'DISCOUNT_CAP',
+        `Cart has ${requestedPercent}% discount but merchant allows no AI-negotiated discounts`,
+        'Remove coupon or choose a different store'
+      );
+      return;
+    }
+    if (requestedPercent > cap) {
+      this.fail(
+        'DISCOUNT_CAP',
+        `Discount ${requestedPercent}% exceeds merchant cap of ${cap}%`,
+        `Request discount up to ${cap}% via negotiate_discount`
+      );
+    } else {
+      this.pass('DISCOUNT_CAP');
     }
   }
 

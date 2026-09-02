@@ -7,6 +7,8 @@ import { validate } from '../middleware/validate';
 import { policyEngine } from '../services/policy';
 import { logAudit } from '../services/audit';
 import { generateBlockTrace } from '../services/reasoning';
+import { getUpsellSuggestions } from '../services/upsell';
+import { negotiateDiscount } from '../services/negotiation';
 import { Cart, CartItem, Merchant, Product } from '../types';
 
 const router = Router({ mergeParams: true });
@@ -31,6 +33,16 @@ const UpdateCartSchema = z.object({
       quantity: z.number().int().nonnegative().max(100), // 0 = remove item
     })
   ),
+});
+
+const NegotiateSchema = z.object({
+  requested_discount_percent: z.number().min(0).max(100),
+  agent_reasoning: z.string().optional(),
+});
+
+const AcceptUpsellSchema = z.object({
+  sku: z.string().min(1),
+  quantity: z.number().int().positive().max(10).default(1),
 });
 
 /**
@@ -137,11 +149,23 @@ router.post('/', requireAIT, validate(CreateCartSchema), async (req: Request, re
     duration_ms: Date.now() - start,
   });
 
+  const suggestedItems = await getUpsellSuggestions(storeId, cartItems);
+  if (suggestedItems.length > 0) {
+    await logAudit({
+      agent_id: agent.agent_id,
+      merchant_id: storeId,
+      action: 'UPSELL_SUGGESTED',
+      input: { cart_id: cartId, items: cartItems.map((i) => i.sku) },
+      output: { suggested_items: suggestedItems },
+    });
+  }
+
   res.status(201).json({
     cart_id: cartId,
     store_id: storeId,
     items: cartItems,
     subtotal_inr: subtotal,
+    suggested_items: suggestedItems,
     policy_status: policyResult.requires_human_review ? 'REQUIRES_REVIEW' : 'APPROVED',
     requires_human_review: policyResult.requires_human_review,
     policy_warnings: policyResult.warnings,
@@ -210,6 +234,169 @@ router.patch('/:cartId', requireAIT, validate(UpdateCartSchema), async (req: Req
 
   res.json({ cart_id: cartId, items, subtotal_inr: newSubtotal });
 });
+
+/**
+ * POST /v1/stores/:storeId/cart/:cartId/negotiate
+ * Agent ↔ merchant negotiation — auto-applies coupon within discount_cap_percent.
+ */
+router.post(
+  '/:cartId/negotiate',
+  requireAIT,
+  validate(NegotiateSchema),
+  async (req: Request, res: Response) => {
+    const start = Date.now();
+    const { storeId, cartId } = req.params;
+    const body = req.body as z.infer<typeof NegotiateSchema>;
+    const agent = req.agent!;
+
+    const cart = await queryOne<Cart>(
+      `SELECT * FROM carts WHERE id = $1 AND merchant_id = $2 AND agent_id = $3 AND status = 'ACTIVE'`,
+      [cartId, storeId, agent.agent_id]
+    );
+
+    if (!cart) {
+      res.status(404).json({ error: 'NOT_FOUND', detail: 'Active cart not found' });
+      return;
+    }
+
+    const merchant = await queryOne<Merchant>('SELECT * FROM merchants WHERE id = $1', [storeId]);
+    if (!merchant) {
+      res.status(404).json({ error: 'NOT_FOUND', detail: 'Store not found' });
+      return;
+    }
+
+    const policies = merchant.policies as Merchant['policies'];
+    const result = negotiateDiscount(
+      cart.subtotal_inr,
+      body.requested_discount_percent,
+      policies
+    );
+
+    if (!result.approved) {
+      res.status(422).json({
+        error: 'NEGOTIATION_REJECTED',
+        detail: result.message,
+        negotiation: result,
+      });
+      return;
+    }
+
+    await query(
+      `UPDATE carts SET
+         discount_inr = $1,
+         discount_percent = $2,
+         final_amount_inr = $3,
+         coupon_code = $4
+       WHERE id = $5`,
+      [
+        result.discount_inr,
+        result.granted_discount_percent,
+        result.final_amount_inr,
+        result.coupon_code ?? null,
+        cartId,
+      ]
+    );
+
+    const logId = await logAudit({
+      agent_id: agent.agent_id,
+      merchant_id: storeId,
+      action: 'DISCOUNT_NEGOTIATED',
+      input: {
+        cart_id: cartId,
+        requested_discount_percent: body.requested_discount_percent,
+        agent_reasoning: body.agent_reasoning,
+      },
+      output: result,
+      duration_ms: Date.now() - start,
+    });
+
+    res.json({
+      cart_id: cartId,
+      negotiation: result,
+      audit_log_id: logId,
+    });
+  }
+);
+
+/**
+ * POST /v1/stores/:storeId/cart/:cartId/accept-upsell
+ * Add a suggested upsell item to cart and track merchant revenue lift.
+ */
+router.post(
+  '/:cartId/accept-upsell',
+  requireAIT,
+  validate(AcceptUpsellSchema),
+  async (req: Request, res: Response) => {
+    const start = Date.now();
+    const { storeId, cartId } = req.params;
+    const body = req.body as z.infer<typeof AcceptUpsellSchema>;
+    const agent = req.agent!;
+
+    const cart = await queryOne<Cart>(
+      `SELECT * FROM carts WHERE id = $1 AND merchant_id = $2 AND agent_id = $3 AND status = 'ACTIVE'`,
+      [cartId, storeId, agent.agent_id]
+    );
+
+    if (!cart) {
+      res.status(404).json({ error: 'NOT_FOUND', detail: 'Active cart not found' });
+      return;
+    }
+
+    const product = await queryOne<Product>(
+      'SELECT * FROM products WHERE sku = $1 AND merchant_id = $2 AND in_stock = true',
+      [body.sku, storeId]
+    );
+
+    if (!product) {
+      res.status(404).json({ error: 'NOT_FOUND', detail: `Upsell product ${body.sku} not available` });
+      return;
+    }
+
+    let items = cart.items as CartItem[];
+    const existing = items.find((i) => i.sku === body.sku);
+    if (existing) {
+      existing.quantity += body.quantity;
+    } else {
+      items.push({
+        sku: body.sku,
+        quantity: body.quantity,
+        price_inr: product.data.price_inr,
+        name: product.data.name,
+        categories: product.data.categories,
+      });
+    }
+
+    const newSubtotal = items.reduce((sum, i) => sum + i.price_inr * i.quantity, 0);
+    const liftInr = product.data.price_inr * body.quantity;
+
+    // Recalculate discount if coupon applied
+    const discountPercent = Number(cart.discount_percent ?? 0);
+    const discountInr = discountPercent > 0 ? Math.floor(newSubtotal * discountPercent / 100) : 0;
+    const finalAmount = newSubtotal - discountInr;
+
+    await query(
+      `UPDATE carts SET items = $1, subtotal_inr = $2, discount_inr = $3, final_amount_inr = $4 WHERE id = $5`,
+      [JSON.stringify(items), newSubtotal, discountInr, finalAmount, cartId]
+    );
+
+    await logAudit({
+      agent_id: agent.agent_id,
+      merchant_id: storeId,
+      action: 'UPSELL_ACCEPTED',
+      input: { cart_id: cartId, sku: body.sku, quantity: body.quantity },
+      output: { estimated_lift_inr: liftInr, new_subtotal_inr: newSubtotal },
+      duration_ms: Date.now() - start,
+    });
+
+    res.json({
+      cart_id: cartId,
+      items,
+      subtotal_inr: newSubtotal,
+      final_amount_inr: finalAmount,
+      upsell_accepted: { sku: body.sku, lift_inr: liftInr },
+    });
+  }
+);
 
 /**
  * DELETE /v1/stores/:storeId/cart/:cartId
