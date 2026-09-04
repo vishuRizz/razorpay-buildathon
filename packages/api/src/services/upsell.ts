@@ -40,6 +40,16 @@ const UPSELL_RULES: UpsellRule[] = [
     bundle_discount_percent: 5,
   },
   {
+    trigger_categories: ['audio'],
+    suggest_skus: ['CABLE-USBC-2M'],
+    reason: 'Add a braided USB-C cable for charging your earbuds on the go',
+  },
+  {
+    trigger_skus: ['PILLOW-NECK-MEMORY', 'MASK-SLEEP-3D'],
+    suggest_skus: ['BOTTLE-COLLAPSIBLE-750'],
+    reason: 'Complete your travel comfort kit with a collapsible water bottle',
+  },
+  {
     trigger_categories: ['travel', 'essentials'],
     suggest_skus: ['SIM-TRAVEL-PREPAID'],
     reason: 'Add a prepaid travel SIM for backup connectivity when WiFi is unavailable',

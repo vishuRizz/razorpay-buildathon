@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import {
   Brain, Radio, Search, Store, ShieldCheck, CreditCard, CheckCircle2,
   XCircle, Loader2, Zap, Clock, Play, Sparkles, ExternalLink, Square,
-  ArrowRight, Wifi
+  ArrowRight, Headphones, Package
 } from 'lucide-react';
 
 interface AgentEvent {
@@ -31,17 +31,26 @@ interface AgentSession {
 }
 
 const DEFAULT_TASK =
-  'Buy a portable WiFi device for my trip to Goa, budget ₹3,000. Compare WiFi options across GadgetNest, ConnectHub, and all other stores — explain price vs battery tradeoffs before buying.';
+  'Surprise me — buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
 
 const PRESETS = [
-  { label: 'Goa WiFi', task: DEFAULT_TASK },
-  { label: 'Earbuds', task: 'Buy noise-cancelling earbuds under ₹2,000. Compare all stores.' },
+  { label: 'Surprise me', task: DEFAULT_TASK },
+  { label: 'Book + snack', task: 'Buy a paperback book and an organic snack under ₹1,000. Search BookNook and GreenSpoon.' },
+  { label: 'Home office', task: 'Set up a home office under ₹5,000 — monitor accessories or desk gear from TechVault and HomeBasics.' },
+  { label: 'Pet care', task: 'Buy something for my dog under ₹1,500 from PetPals — food, toy, or bed.' },
+  { label: 'Skincare', task: 'Build a basic skincare routine under ₹2,000 from BeautyBar.' },
+  { label: 'Kids gift', task: 'Find a fun gift for an 8-year-old under ₹1,500 from KidZone.' },
+  { label: 'Fitness', task: 'Buy home workout gear under ₹1,500 from FitZone.' },
+  { label: 'Goa WiFi', task: 'Buy portable WiFi for Goa under ₹3,000. Compare all connectivity stores.' },
 ];
 
-const PRODUCTS = [
-  { store: 'GadgetNest', name: 'JioFi 4G', price: '₹2,499', battery: '6hr battery', highlight: false },
-  { store: 'GadgetNest', name: 'Mi 5G Pro', price: '₹4,999', battery: '8hr · 5G', highlight: false },
-  { store: 'ConnectHub', name: 'Budget 4G', price: '₹1,899', battery: '3hr · cheapest', highlight: true },
+const CATALOG_HIGHLIGHTS = [
+  { store: 'TechVault', name: '27" 4K IPS Monitor', price: '₹24,999', detail: 'USB-C · sRGB', icon: Package },
+  { store: 'BookNook', name: 'Atomic Habits', price: '₹399', detail: 'Paperback', icon: Package },
+  { store: 'BeautyBar', name: 'Vitamin C Serum', price: '₹899', detail: '30ml · brightening', icon: Sparkles },
+  { store: 'PetPals', name: 'Orthopedic Dog Bed', price: '₹2,499', detail: 'Medium · memory foam', icon: Package },
+  { store: 'GreenSpoon', name: 'Organic Granola', price: '₹449', detail: '500g · no palm oil', icon: Package },
+  { store: 'GadgetNest', name: 'boAt Airdopes 441', price: '₹1,799', detail: 'TWS · IPX5', icon: Headphones },
 ];
 
 const PIPELINE = [
@@ -123,6 +132,13 @@ function statusLabel(status?: AgentSession['status']) {
 export default function AgentBrain() {
   const [session, setSession] = useState<AgentSession | null>(null);
   const [task, setTask] = useState(DEFAULT_TASK);
+  const [marketplace, setMarketplace] = useState<{
+    store_count: number;
+    product_count: number;
+    category_count: number;
+    price_range_inr?: { min: number; max: number };
+    stores?: { name: string; product_count: number }[];
+  } | null>(null);
   const [launching, setLaunching] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [launchError, setLaunchError] = useState('');
@@ -151,6 +167,19 @@ export default function AgentBrain() {
     const interval = setInterval(fetchSession, ms);
     return () => clearInterval(interval);
   }, [fetchSession, session?.status]);
+
+  useEffect(() => {
+    axios
+      .get<{
+        store_count: number;
+        product_count: number;
+        category_count: number;
+        price_range_inr?: { min: number; max: number };
+        stores?: { name: string; product_count: number }[];
+      }>('/v1/stores/stats')
+      .then(({ data }) => setMarketplace(data))
+      .catch(() => setMarketplace(null));
+  }, []);
 
   useEffect(() => {
     if ((session?.events.length ?? 0) > prevCount.current) {
@@ -207,7 +236,7 @@ export default function AgentBrain() {
         <PageHeader
           eyebrow="Autonomous Buyer"
           title="Agent Brain"
-          subtitle="Razorpay's agent-commerce layer — NPCI UAP / ACP aligned. Launch a buyer, watch it discover stores, compare WiFi options, pass policy, and checkout."
+          subtitle="13-store marketplace · 128 products · books, beauty, pets, tech, food, fitness, travel & more. Launch any shopping task."
           icon={
             <div className="p-2.5 rounded-xl bg-foreground/5 border border-foreground/10">
               <Brain size={22} className="text-foreground" />
@@ -349,31 +378,70 @@ export default function AgentBrain() {
               ))}
             </div>
 
-            {/* Product cards */}
+            {/* Marketplace overview */}
+            <div className="card-elevated p-3 space-y-3">
+              <div className="text-[9px] text-muted-foreground tracking-widest">LIVE MARKETPLACE</div>
+              {marketplace ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'STORES', value: marketplace.store_count },
+                      { label: 'PRODUCTS', value: marketplace.product_count },
+                      { label: 'CATEGORIES', value: marketplace.category_count },
+                    ].map((s) => (
+                      <div key={s.label} className="text-center">
+                        <div className="text-xl font-bold font-mono text-foreground">{s.value}</div>
+                        <div className="text-[8px] text-muted-foreground tracking-widest">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {marketplace.price_range_inr && (
+                    <div className="text-[10px] text-muted-foreground font-mono text-center">
+                      ₹{marketplace.price_range_inr.min.toLocaleString()} – ₹{marketplace.price_range_inr.max.toLocaleString()}
+                    </div>
+                  )}
+                  {marketplace.stores && marketplace.stores.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {marketplace.stores.slice(0, 12).map((s) => (
+                        <span
+                          key={s.name}
+                          className="text-[9px] px-2 py-0.5 rounded-full border border-border bg-muted/60 text-muted-foreground font-mono"
+                        >
+                          {s.name}
+                          <span className="text-foreground/50 ml-1">{s.product_count}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-[10px] text-muted-foreground font-mono text-center py-2">Loading marketplace…</div>
+              )}
+            </div>
+
+            {/* Catalog highlights */}
             <div className="space-y-2">
-              <div className="text-[9px] text-muted-foreground tracking-widest px-1">WIFI OPTIONS · 3 STORES</div>
-              {PRODUCTS.map((p) => (
+              <div className="text-[9px] text-muted-foreground tracking-widest px-1">SAMPLE LISTINGS</div>
+              {CATALOG_HIGHLIGHTS.map((p) => {
+                const Icon = p.icon;
+                return (
                 <div
                   key={`${p.store}-${p.name}`}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    p.highlight
-                      ? 'border-foreground/15 bg-foreground/5'
-                      : 'border-border bg-muted/50'
-                  }`}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/50 transition-colors"
                 >
-                  <div className={`p-2 rounded-md ${p.highlight ? 'bg-foreground/10' : 'bg-muted'}`}>
-                    <Wifi size={14} className={p.highlight ? 'text-foreground' : 'text-muted-foreground'} />
+                  <div className="p-2 rounded-md bg-muted">
+                    <Icon size={14} className="text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] text-muted-foreground">{p.store}</div>
                     <div className="text-xs text-foreground font-medium truncate">{p.name}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-xs font-bold ${p.highlight ? 'text-foreground' : 'text-foreground'}`}>{p.price}</div>
-                    <div className="text-[9px] text-muted-foreground">{p.battery}</div>
+                    <div className="text-xs font-bold text-foreground">{p.price}</div>
+                    <div className="text-[9px] text-muted-foreground">{p.detail}</div>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </div>
 

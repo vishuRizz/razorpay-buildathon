@@ -6,6 +6,50 @@ import { logAudit } from '../services/audit';
 const router = Router();
 
 /**
+ * GET /v1/stores/stats
+ * Marketplace overview — live store and product counts (no auth required).
+ */
+router.get('/stats', async (_req: Request, res: Response) => {
+  const [storeRow, productRow, categoryRows, priceRow, storeBreakdown] = await Promise.all([
+    queryOne<{ count: string }>(
+      `SELECT COUNT(*) as count FROM merchants WHERE ai_buyers_enabled = true`
+    ),
+    queryOne<{ count: string }>(`SELECT COUNT(*) as count FROM products WHERE in_stock = true`),
+    query<{ category: string }>(
+      `SELECT DISTINCT jsonb_array_elements_text(data->'categories') as category
+       FROM products ORDER BY category`
+    ),
+    queryOne<{ min_price: string; max_price: string }>(
+      `SELECT MIN((data->>'price_inr')::int) as min_price, MAX((data->>'price_inr')::int) as max_price
+       FROM products WHERE in_stock = true`
+    ),
+    query<{ name: string; product_count: string }>(
+      `SELECT m.name, COUNT(p.sku) as product_count
+       FROM merchants m
+       LEFT JOIN products p ON p.merchant_id = m.id AND p.in_stock = true
+       WHERE m.ai_buyers_enabled = true
+       GROUP BY m.id, m.name
+       ORDER BY product_count DESC, m.name`
+    ),
+  ]);
+
+  res.json({
+    store_count: parseInt(storeRow?.count ?? '0', 10),
+    product_count: parseInt(productRow?.count ?? '0', 10),
+    category_count: categoryRows.length,
+    categories: categoryRows.map((r) => r.category),
+    price_range_inr: {
+      min: parseInt(priceRow?.min_price ?? '0', 10),
+      max: parseInt(priceRow?.max_price ?? '0', 10),
+    },
+    stores: storeBreakdown.map((s) => ({
+      name: s.name,
+      product_count: parseInt(s.product_count, 10),
+    })),
+  });
+});
+
+/**
  * GET /v1/stores
  * List all registered stores with optional filters.
  */
@@ -64,6 +108,7 @@ router.get('/', async (req: Request, res: Response) => {
       policies: m.policies,
     })),
     total: filtered.length,
+    marketplace_note: 'No hard cap — merchants register via POST /v1/merchants/register',
   });
 });
 

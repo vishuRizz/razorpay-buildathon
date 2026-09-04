@@ -88,7 +88,7 @@ app.use((_req, res) => {
 // ─── Global Error Handler ────────────────────────────────────
 app.use(errorHandler);
 
-// ─── Start ───────────────────────────────────────────────────
+// ─── Start (local / Docker only — Vercel uses the exported app) ─
 async function start() {
   console.log('\n🚀 AISLE Agent Commerce API\n');
 
@@ -113,9 +113,12 @@ async function start() {
   });
 }
 
-start().catch((err) => {
-  console.error('Fatal startup error:', err);
-  process.exit(1);
-});
+// Vercel sets VERCEL=1 and invokes the exported Express app as a serverless function
+if (!process.env.VERCEL) {
+  start().catch((err) => {
+    console.error('Fatal startup error:', err);
+    process.exit(1);
+  });
+}
 
 export default app;

@@ -6,16 +6,30 @@ import { Product, ProductData } from '../types';
 // without requiring a vector DB or external embedding API.
 // ================================================================
 
-/** Concept clusters for travel/connectivity commerce */
+/** Concept clusters for commerce search */
 const CONCEPT_SYNONYMS: Record<string, string[]> = {
   wifi: ['wifi', 'wi-fi', 'hotspot', 'router', 'jiofi', 'mifi', 'wireless', 'internet', 'connectivity', '4g', '5g', 'lte'],
   travel: ['travel', 'trip', 'journey', 'vacation', 'holiday', 'portable', 'mobile', 'on-the-go', 'beach', 'flight'],
-  power: ['adapter', 'charger', 'plug', 'power', 'universal', 'voltage', 'usb', 'charging'],
-  budget: ['cheap', 'affordable', 'budget', 'economical', 'low-cost', 'value', 'inexpensive'],
+  audio: ['earbuds', 'earphones', 'headphones', 'tws', 'wireless', 'audio', 'music', 'speaker', 'sound', 'noise'],
+  comfort: ['pillow', 'neck', 'sleep', 'mask', 'comfort', 'rest', 'flight', 'cozy'],
+  power: ['adapter', 'charger', 'plug', 'power', 'universal', 'voltage', 'usb', 'charging', 'powerbank', 'battery'],
+  budget: ['cheap', 'affordable', 'budget', 'economical', 'low-cost', 'value', 'inexpensive', 'surprise', 'anything'],
   premium: ['premium', 'fast', 'high-speed', '5g', 'pro', 'best', 'top', 'flagship'],
   sim: ['sim', 'esim', 'prepaid', 'data', 'roaming', 'cellular'],
-  lightweight: ['light', 'lightweight', 'compact', 'small', 'portable', 'pocket'],
-  battery: ['battery', 'hours', 'long-lasting', 'endurance', 'runtime'],
+  fitness: ['fitness', 'tracker', 'watch', 'health', 'steps', 'heart', 'wearable', 'yoga', 'mat', 'gym', 'workout', 'dumbbell', 'resistance', 'cardio'],
+  organisation: ['packing', 'cubes', 'organise', 'organize', 'luggage', 'bag', 'storage', 'desk', 'office'],
+  security: ['lock', 'tsa', 'security', 'luggage', 'safe', 'rfid', 'wallet'],
+  home: ['home', 'kitchen', 'desk', 'lamp', 'mug', 'kettle', 'office', 'decor', 'plant', 'cushion', 'organizer'],
+  fashion: ['bag', 'tote', 'wallet', 'sunglasses', 'scarf', 'belt', 'fashion', 'accessories', 'style'],
+  beauty: ['skincare', 'serum', 'moisturizer', 'sunscreen', 'cleanser', 'grooming', 'trimmer', 'perfume', 'hair'],
+  books: ['book', 'paperback', 'fiction', 'reading', 'journal', 'notebook', 'stationery', 'pen'],
+  food: ['snacks', 'organic', 'granola', 'tea', 'coffee', 'honey', 'nuts', 'food', 'healthy'],
+  pets: ['dog', 'cat', 'pet', 'food', 'toy', 'leash', 'litter', 'bed', 'grooming'],
+  kids: ['kids', 'toy', 'puzzle', 'school', 'children', 'learning', 'stem', 'plush'],
+  automotive: ['car', 'auto', 'dashboard', 'vacuum', 'dash cam', 'charger', 'vehicle'],
+  computing: ['monitor', 'ssd', 'ram', 'laptop', 'keyboard', 'mechanical', 'webcam', 'dock'],
+  lightweight: ['light', 'lightweight', 'compact', 'small', 'portable', 'pocket', 'collapsible'],
+  battery: ['battery', 'hours', 'long-lasting', 'endurance', 'runtime', 'mah'],
 };
 
 const STOP_WORDS = new Set([

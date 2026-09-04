@@ -18,7 +18,7 @@ import {
 const router = Router();
 
 const DEFAULT_TASK =
-  'Buy a portable WiFi device for my trip to Goa, budget ₹3,000. Compare WiFi options across GadgetNest, ConnectHub, and all other stores — explain price vs battery tradeoffs before buying.';
+  'Surprise me — buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
 
 const RunAgentSchema = z.object({
   task: z.string().min(10).max(2000).optional(),
@@ -44,10 +44,10 @@ async function issueAgentToken(): Promise<{
   process.env.PORT = String(port);
 
   const constraints = {
-    spending_limit_per_session_inr: 3000,
-    spending_limit_per_day_inr: 5000,
-    allowed_categories: ['electronics', 'travel', 'connectivity', 'accessories'],
-    requires_human_confirm_above_inr: 4000,
+    spending_limit_per_session_inr: 8000,
+    spending_limit_per_day_inr: 15000,
+    allowed_categories: ['*'],
+    requires_human_confirm_above_inr: 6000,
   };
 
   const { data } = await aisleRequest('POST', '/agents/token', {
