@@ -91,7 +91,13 @@ function collapseEvents(events: AgentEvent[]): AgentEvent[] {
 
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
-    if (skip.has(ev.id) || ev.type === 'thinking') continue;
+    if (skip.has(ev.id)) continue;
+
+    // Keep thinking only when it's the latest event (shows "waiting on model")
+    if (ev.type === 'thinking') {
+      if (i === events.length - 1) out.push(ev);
+      continue;
+    }
 
     if (ev.type === 'tool_call') {
       const next = events.slice(i + 1).find((e) => e.type === 'tool_result' && e.step === ev.step);
@@ -521,6 +527,11 @@ export default function AgentBrain() {
                           {ev.detail != null && ev.detail !== '' && (
                             <p className="text-muted-foreground mt-1.5 leading-relaxed break-words whitespace-pre-wrap">
                               {typeof ev.detail === 'string' ? ev.detail : JSON.stringify(ev.detail, null, 2)}
+                            </p>
+                          )}
+                          {ev.type === 'thinking' && isRunning && (
+                            <p className="text-[10px] text-blue-600 mt-1 flex items-center gap-1">
+                              <Loader2 size={10} className="animate-spin" /> Waiting on model…
                             </p>
                           )}
                           {ev.meta?.duration_ms != null && (

@@ -9,11 +9,14 @@ const { TOOL_DEFINITIONS, executeTool } = require('./tools');
 // Small production models only (fast + cheap on Groq developer plan)
 const MODEL_CANDIDATES = [
   process.env.GROQ_AGENT_MODEL,
-  'openai/gpt-oss-20b',
   'llama-3.1-8b-instant',
+  'openai/gpt-oss-20b',
 ].filter(Boolean);
 
-const MAX_ITERATIONS = Number(process.env.AGENT_MAX_ITERATIONS ?? 20);
+// Vercel serverless has a ~60s ceiling — keep the loop short
+const MAX_ITERATIONS = Number(
+  process.env.AGENT_MAX_ITERATIONS ?? (process.env.VERCEL ? 8 : 20)
+);
 
 function isModelNotFoundError(err) {
   const msg = String(err?.message ?? err);
@@ -60,27 +63,19 @@ function buildSystemPrompt(constraints) {
       ? 'all categories (unrestricted)'
       : constraints.allowed_categories.join(', ');
 
-  return `You are a general-purpose autonomous shopping agent on the AISLE commerce protocol.
+  return `You are a fast autonomous shopping agent on the AISLE commerce protocol.
 
-Your job: interpret the user's request literally and complete their shopping task end-to-end using tools.
+Goal: finish the purchase quickly end-to-end. Prefer SPEED over exhaustive browsing.
 
-Workflow:
-1. discover_stores — list ALL AI-enabled stores (ai_buyers_enabled: "true"). Do NOT pre-filter to travel/wifi unless the user asked for that.
-2. read_store_manifest — check policies (spending limits, discount_cap_percent) for stores you might buy from.
-3. search_catalog — derive search queries FROM THE USER'S TASK. Use natural-language q for semantic search.
-   - User wants skincare → search BeautyBar + q="vitamin c serum moisturizer"
-   - User wants books/snacks → BookNook, GreenSpoon
-   - User wants pet supplies → PetPals
-   - User wants kids gift → KidZone
-   - User wants car gear → AutoCare
-   - User wants pro tech → TechVault
-   - Vague "buy anything" → discover ALL stores, search diverse verticals (not just WiFi/travel)
-   Search MULTIPLE stores before deciding. Compare at least 2–3 candidates when possible.
-4. create_cart — buy what best matches the user's actual request and budget. Include agent_task describing why this product fits THEIR ask.
-5. accept_upsell — only if an upsell genuinely fits the user's task (skip irrelevant bundles)
-6. negotiate_discount — try for orders over ₹1500 when store allows discount_cap_percent > 0
-7. checkout — pay once via Razorpay
-8. check_order_status — confirm order, then reply with text summary only
+Workflow (keep it short):
+1. discover_stores — ai_buyers_enabled: "true" (one call)
+2. search_catalog — 1–2 targeted searches max from the user's task (natural-language q)
+3. create_cart — as soon as you have ONE in-budget product that fits. Do NOT keep searching.
+4. checkout — pay once via Razorpay
+5. check_order_status — then reply with a short text summary ONLY
+
+Optional (skip unless clearly useful):
+- read_store_manifest, accept_upsell, negotiate_discount
 
 Hard constraints (never violate):
 - Session spending limit: ₹${constraints.spending_limit_per_session_inr}
@@ -89,13 +84,11 @@ Hard constraints (never violate):
 - Human confirm threshold: ₹${constraints.requires_human_confirm_above_inr ?? 'none'}
 
 Critical rules:
-- The user's message defines what to buy. Never default to WiFi unless they asked for WiFi, hotspot, or connectivity.
-- Vague requests ("buy me anything", "surprise me") → discover ALL stores, browse diverse catalogs (electronics, home, fashion, fitness, travel), pick something useful — NOT always a hotspot.
-- Match product category to user intent. Explain your choice in agent_reasoning referencing their words.
-- If policy blocks you, explain why and stop — do not retry blindly
-- Call checkout exactly ONCE per purchase
-- After check_order_status returns CREATED or PAID, respond with a text summary ONLY — no more tools
-- Never invent SKUs or store IDs — only use values returned by tools`;
+- After ≤2 catalog searches with any usable result under budget → IMMEDIATELY create_cart then checkout
+- Never invent SKUs or store IDs — only use tool results
+- Call checkout exactly ONCE
+- If policy blocks you, explain why and stop
+- Vague "surprise me" → pick any useful under-budget item from the first good catalog hit — do not browse forever`;
 }
 
 /** Stop once checkout succeeded and that order was status-checked. */
