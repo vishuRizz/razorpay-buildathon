@@ -22,8 +22,25 @@ const app: Application = express();
 const PORT = process.env.PORT ?? 3001;
 
 // ─── Middleware ───────────────────────────────────────────────
+const configuredOrigins = (process.env.DASHBOARD_URL ?? 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.DASHBOARD_URL ?? 'http://localhost:5173',
+  origin(origin, callback) {
+    // Non-browser clients (curl, server-to-server) send no Origin
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const allowed =
+      configuredOrigins.includes(origin) ||
+      origin === 'http://localhost:5173' ||
+      origin === 'http://127.0.0.1:5173' ||
+      /\.vercel\.app$/i.test(origin);
+    callback(null, allowed);
+  },
   credentials: true,
 }));
 app.use(express.json({ 

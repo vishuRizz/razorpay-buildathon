@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
+import { API_BASE } from '../lib/api';
 import {
   Brain, Radio, Search, Store, ShieldCheck, CreditCard, CheckCircle2,
   XCircle, Loader2, Zap, Clock, Play, Sparkles, ExternalLink, Square,
@@ -157,7 +158,8 @@ export default function AgentBrain() {
       setGroqOk(status.groq_configured);
       setError('');
     } catch {
-      setError('Cannot reach API — is pnpm dev running?');
+      const target = API_BASE || '(same origin / Vite proxy)';
+      setError(`Cannot reach API at ${target}. Check VITE_API_URL and API CORS (DASHBOARD_URL).`);
     }
   }, []);
 
