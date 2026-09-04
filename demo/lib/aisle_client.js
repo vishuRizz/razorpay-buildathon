@@ -14,6 +14,25 @@ function resolveBaseUrl() {
   return `http://localhost:${process.env.PORT ?? 3001}/v1`;
 }
 
+function formatErrorDetail(data, status) {
+  const raw = data?.detail ?? data?.error ?? data?.message ?? `HTTP ${status}`;
+  if (typeof raw === 'string') {
+    if (data?.fields) {
+      try {
+        return `${raw} · ${JSON.stringify(data.fields)}`;
+      } catch {
+        return raw;
+      }
+    }
+    return raw;
+  }
+  try {
+    return JSON.stringify(raw);
+  } catch {
+    return `HTTP ${status}`;
+  }
+}
+
 const BASE_URL = resolveBaseUrl();
 
 async function aisleRequest(method, path, { body, token } = {}) {
@@ -27,11 +46,16 @@ async function aisleRequest(method, path, { body, token } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await res.json();
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
   const duration_ms = Date.now() - start;
 
   if (!res.ok) {
-    const err = new Error(data.detail ?? data.error ?? `HTTP ${res.status}`);
+    const err = new Error(formatErrorDetail(data, res.status));
     err.status = res.status;
     err.response = data;
     err.duration_ms = duration_ms;
@@ -41,4 +65,4 @@ async function aisleRequest(method, path, { body, token } = {}) {
   return { data, duration_ms };
 }
 
-module.exports = { aisleRequest, BASE_URL, resolveBaseUrl };
+module.exports = { aisleRequest, BASE_URL, resolveBaseUrl, formatErrorDetail };

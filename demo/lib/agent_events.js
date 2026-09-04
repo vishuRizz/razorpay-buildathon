@@ -42,10 +42,14 @@ function toolLabel(name) {
 async function emitAgentEvent(sessionId, payload) {
   if (!sessionId) return;
   try {
+    const body = { session_id: sessionId, ...payload };
+    if (body.detail != null && typeof body.detail !== 'string') {
+      body.detail = JSON.stringify(body.detail);
+    }
     await fetch(`${BASE_URL}/agent-events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, ...payload }),
+      body: JSON.stringify(body),
     });
   } catch {
     // Dashboard streaming is best-effort — never block the agent

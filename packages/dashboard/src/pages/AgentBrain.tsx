@@ -413,9 +413,9 @@ export default function AgentBrain() {
                   )}
                   {marketplace.stores && marketplace.stores.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
-                      {marketplace.stores.slice(0, 12).map((s) => (
+                      {marketplace.stores.slice(0, 12).map((s, i) => (
                         <span
-                          key={s.name}
+                          key={`${s.name}-${i}`}
                           className="text-[9px] px-2 py-0.5 rounded-full border border-border bg-muted/60 text-muted-foreground font-mono"
                         >
                           {s.name}
@@ -518,9 +518,9 @@ export default function AgentBrain() {
                               <Clock size={9} /> {formatTime(ev.timestamp)}
                             </span>
                           </div>
-                          {ev.detail && (
+                          {ev.detail != null && ev.detail !== '' && (
                             <p className="text-muted-foreground mt-1.5 leading-relaxed break-words whitespace-pre-wrap">
-                              {ev.detail}
+                              {typeof ev.detail === 'string' ? ev.detail : JSON.stringify(ev.detail, null, 2)}
                             </p>
                           )}
                           {ev.meta?.duration_ms != null && (

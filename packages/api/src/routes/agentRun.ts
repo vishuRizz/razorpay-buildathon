@@ -47,6 +47,26 @@ function loadDemoModule<T = unknown>(file: string): T {
   return require(resolveDemoModule(file)) as T;
 }
 
+function formatFailureDetail(err: unknown): string {
+  if (err instanceof Error) {
+    const anyErr = err as Error & { response?: unknown };
+    if (anyErr.response != null) {
+      try {
+        return `${anyErr.message} · ${JSON.stringify(anyErr.response)}`;
+      } catch {
+        return anyErr.message || 'Unknown error';
+      }
+    }
+    return anyErr.message || 'Unknown error';
+  }
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Unknown error';
+  }
+}
+
 function scheduleBackground(job: Promise<void>): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -124,17 +144,19 @@ async function runAgentJob(sessionId: string, task: string): Promise<void> {
         session_status: 'stopped',
       });
     } else {
+      const detail = formatFailureDetail(err);
+      console.error('[AGENT RUN] Failed:', detail);
       await emitAgentEvent(sessionId, {
         type: 'error',
         label: 'Agent failed',
-        detail: err instanceof Error ? err.message : String(err),
+        detail,
         status: 'error',
         session_status: 'error',
       });
       await appendAgentEvent(sessionId, {
         type: 'error',
         label: 'Agent failed',
-        detail: err instanceof Error ? err.message : String(err),
+        detail,
         status: 'error',
         session_status: 'error',
       });

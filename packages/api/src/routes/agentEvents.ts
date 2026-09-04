@@ -18,7 +18,10 @@ const PostEventSchema = z.object({
   model: z.string().optional(),
   step: z.number().int().optional(),
   label: z.string().optional(),
-  detail: z.string().optional(),
+  detail: z.preprocess(
+    (v) => (typeof v === 'string' ? v : v == null ? undefined : JSON.stringify(v)),
+    z.string().optional()
+  ),
   status: z.enum(['pending', 'active', 'ok', 'error']).optional(),
   session_status: z.enum(['running', 'complete', 'error', 'stopped']).optional(),
   meta: z.record(z.unknown()).optional(),
