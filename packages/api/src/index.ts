@@ -74,10 +74,24 @@ app.use('/v1/agent', agentRunRouter);
 // Webhooks
 app.use('/v1/webhooks', webhooksRouter);
 
-// Root → React dashboard landing (avoids duplicate static landing + auto-redirect confusion)
+// Root → dashboard when it's a real public URL; otherwise API info (avoids localhost redirects on Vercel)
 const dashboardUrl = process.env.DASHBOARD_URL ?? 'http://localhost:5173';
+const isLocalDashboard =
+  !dashboardUrl ||
+  /localhost|127\.0\.0\.1/i.test(dashboardUrl);
+
 app.get('/', (_req, res) => {
-  res.redirect(302, dashboardUrl);
+  if (!isLocalDashboard) {
+    res.redirect(302, dashboardUrl);
+    return;
+  }
+  res.json({
+    service: 'AISLE Agent Commerce API',
+    version: '1.0.0',
+    health: '/health',
+    stores: '/v1/stores',
+    dashboard: dashboardUrl,
+  });
 });
 
 // ─── 404 Handler ─────────────────────────────────────────────
