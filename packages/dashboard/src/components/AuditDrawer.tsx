@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Brain, ShieldCheck, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, Clock, CheckCircle2, ShieldOff } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { apiUrl } from '../lib/api';
 
 interface LogEntry {
   id: string;
@@ -47,7 +48,7 @@ export default function AuditDrawer({ log, onClose }: AuditDrawerProps) {
       const merchantId = log.merchant_id;
       if (!orderId || !merchantId) return;
 
-      const res = await fetch(`http://localhost:3001/v1/merchants/${merchantId}/orders/${orderId}/${action}`, {
+      const res = await fetch(apiUrl(`/v1/merchants/${merchantId}/orders/${orderId}/${action}`), {
         method: 'POST',
       });
       if (res.ok) {

@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, Clock, Activity
 } from 'lucide-react';
 import NetworkGraph from '../components/NetworkGraph';
+import { apiUrl } from '../lib/api';
 
 interface LogEntry {
   id: string;
@@ -108,7 +109,7 @@ export default function LiveFeed() {
     if (!merchantId) return;
 
     // Connect to SSE stream
-    const eventSource = new EventSource(`/v1/merchants/${merchantId}/stream`);
+    const eventSource = new EventSource(apiUrl(`/v1/merchants/${merchantId}/stream`));
     
     eventSource.onmessage = (event) => {
       try {
