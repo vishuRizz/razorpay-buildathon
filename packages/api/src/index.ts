@@ -22,26 +22,17 @@ const app: Application = express();
 const PORT = process.env.PORT ?? 3001;
 
 // ─── Middleware ───────────────────────────────────────────────
-const configuredOrigins = (process.env.DASHBOARD_URL ?? 'http://localhost:5173')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+// Reflect request Origin (hackathon: dashboard + previews on *.vercel.app).
+// credentials:false — dashboard uses bearer/AIT headers, not cookies.
+// no-store — avoid CDN serving a non-CORS response to the browser.
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 app.use(cors({
-  origin(origin, callback) {
-    // Non-browser clients (curl, server-to-server) send no Origin
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-    const allowed =
-      configuredOrigins.includes(origin) ||
-      origin === 'http://localhost:5173' ||
-      origin === 'http://127.0.0.1:5173' ||
-      /\.vercel\.app$/i.test(origin);
-    callback(null, allowed);
-  },
-  credentials: true,
+  origin: true,
+  credentials: false,
 }));
 app.use(express.json({ 
   limit: '2mb',
@@ -87,6 +78,9 @@ app.use('/v1/simulate', simulateRouter);
 // Live agent brain events (LLM demo streaming)
 app.use('/v1/agent-events', agentEventsRouter);
 app.use('/v1/agent', agentRunRouter);
+// Aliases without "agent" in the path — some browser ad-blockers block /agent/ URLs
+app.use('/v1/brain/events', agentEventsRouter);
+app.use('/v1/brain', agentRunRouter);
 
 // Webhooks
 app.use('/v1/webhooks', webhooksRouter);

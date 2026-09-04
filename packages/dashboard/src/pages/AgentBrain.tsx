@@ -150,16 +150,22 @@ export default function AgentBrain() {
 
   const fetchSession = useCallback(async () => {
     try {
+      // Use /v1/brain/* — ad-blockers often block URLs containing "/agent/"
       const [{ data: latest }, { data: status }] = await Promise.all([
-        axios.get<{ session: AgentSession | null }>('/v1/agent-events/latest'),
-        axios.get<{ running: boolean; groq_configured: boolean }>('/v1/agent/run/status'),
+        axios.get<{ session: AgentSession | null }>('/v1/brain/events/latest'),
+        axios.get<{ running: boolean; groq_configured: boolean }>('/v1/brain/run/status'),
       ]);
       setSession(latest.session);
       setGroqOk(status.groq_configured);
       setError('');
-    } catch {
+    } catch (err: unknown) {
       const target = API_BASE || '(same origin / Vite proxy)';
-      setError(`Cannot reach API at ${target}. Check VITE_API_URL and API CORS (DASHBOARD_URL).`);
+      const detail = axios.isAxiosError(err)
+        ? [err.message, err.code, err.response?.status].filter(Boolean).join(' · ')
+        : err instanceof Error
+          ? err.message
+          : 'unknown error';
+      setError(`Cannot reach API at ${target}. ${detail}`);
     }
   }, []);
 
@@ -194,7 +200,7 @@ export default function AgentBrain() {
     setLaunching(true);
     setLaunchError('');
     try {
-      await axios.post('/v1/agent/run', { task });
+      await axios.post('/v1/brain/run', { task });
       await fetchSession();
     } catch (err: unknown) {
       setLaunchError(
@@ -211,7 +217,7 @@ export default function AgentBrain() {
     setStopping(true);
     setLaunchError('');
     try {
-      await axios.post('/v1/agent/stop', { session_id: session?.session_id });
+      await axios.post('/v1/brain/stop', { session_id: session?.session_id });
       await fetchSession();
     } catch (err: unknown) {
       setLaunchError(
