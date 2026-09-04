@@ -155,7 +155,11 @@ export default function AgentBrain() {
         axios.get<{ session: AgentSession | null }>('/v1/brain/events/latest'),
         axios.get<{ running: boolean; groq_configured: boolean }>('/v1/brain/run/status'),
       ]);
-      setSession(latest.session);
+      setSession((prev) => {
+        // Avoid UI flicker when a poll briefly returns null
+        if (!latest.session && prev?.status === 'running') return prev;
+        return latest.session;
+      });
       setGroqOk(status.groq_configured);
       setError('');
     } catch (err: unknown) {
@@ -171,10 +175,9 @@ export default function AgentBrain() {
 
   useEffect(() => {
     fetchSession();
-    const ms = session?.status === 'running' ? 700 : 3000;
-    const interval = setInterval(fetchSession, ms);
+    const interval = setInterval(fetchSession, 1200);
     return () => clearInterval(interval);
-  }, [fetchSession, session?.status]);
+  }, [fetchSession]);
 
   useEffect(() => {
     axios

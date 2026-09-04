@@ -23,6 +23,7 @@ async function migrate() {
     console.log('  • carts');
     console.log('  • orders');
     console.log('  • audit_log');
+    console.log('  • agent_sessions');
     console.log('\n🚀 Ready to seed: pnpm seed\n');
   } catch (err) {
     console.error('❌ Migration failed:', err);

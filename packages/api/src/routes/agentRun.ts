@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
@@ -28,10 +29,36 @@ const StopAgentSchema = z.object({
   session_id: z.string().optional(),
 });
 
+function resolveDemoModule(file: string): string {
+  const candidates = [
+    path.join(process.cwd(), 'demo-lib', file),
+    path.join(process.cwd(), 'packages/api/demo-lib', file),
+    path.resolve(__dirname, '../../demo-lib', file),
+    path.resolve(__dirname, '../../../../demo/lib', file),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  throw new Error(`Demo module not found: ${file}. Tried: ${candidates.join(' | ')}`);
+}
+
 function loadDemoModule<T = unknown>(file: string): T {
-  const modPath = path.resolve(__dirname, '../../../../demo/lib', file);
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require(modPath) as T;
+  return require(resolveDemoModule(file)) as T;
+}
+
+function scheduleBackground(job: Promise<void>): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { waitUntil } = require('@vercel/functions') as {
+      waitUntil: (p: Promise<unknown>) => void;
+    };
+    waitUntil(job);
+    return;
+  } catch {
+    // Local / package missing — still run the job in-process
+  }
+  void job.catch((err) => console.error('[AGENT RUN] Background job failed:', err));
 }
 
 async function issueAgentToken(): Promise<{
@@ -40,8 +67,6 @@ async function issueAgentToken(): Promise<{
   constraints: Record<string, unknown>;
 }> {
   const { aisleRequest } = loadDemoModule<{ aisleRequest: Function }>('aisle_client.js');
-  const port = process.env.PORT ?? 3001;
-  process.env.PORT = String(port);
 
   const constraints = {
     spending_limit_per_session_inr: 8000,
@@ -91,7 +116,7 @@ async function runAgentJob(sessionId: string, task: string): Promise<void> {
         status: 'error',
         session_status: 'stopped',
       });
-      appendAgentEvent(sessionId, {
+      await appendAgentEvent(sessionId, {
         type: 'stopped',
         label: 'Agent stopped',
         detail: 'Cancelled by user',
@@ -100,6 +125,13 @@ async function runAgentJob(sessionId: string, task: string): Promise<void> {
       });
     } else {
       await emitAgentEvent(sessionId, {
+        type: 'error',
+        label: 'Agent failed',
+        detail: err instanceof Error ? err.message : String(err),
+        status: 'error',
+        session_status: 'error',
+      });
+      await appendAgentEvent(sessionId, {
         type: 'error',
         label: 'Agent failed',
         detail: err instanceof Error ? err.message : String(err),
@@ -121,7 +153,7 @@ router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response
     return;
   }
 
-  if (isAnySessionRunning()) {
+  if (await isAnySessionRunning()) {
     res.status(409).json({
       error: 'AGENT_BUSY',
       detail: 'An agent is already running. Stop it first or wait for completion.',
@@ -132,7 +164,7 @@ router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response
   const task = (req.body as z.infer<typeof RunAgentSchema>).task ?? DEFAULT_TASK;
   const sessionId = `sess_${nanoid(12)}`;
 
-  startSession({ session_id: sessionId, task });
+  await startSession({ session_id: sessionId, task });
 
   res.status(202).json({
     session_id: sessionId,
@@ -140,16 +172,13 @@ router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response
     task,
   });
 
-  setImmediate(() => {
-    runAgentJob(sessionId, task).catch((err) => {
-      console.error('[AGENT RUN] Background job failed:', err);
-    });
-  });
+  // Return 202 immediately; keep work alive via waitUntil on Vercel
+  scheduleBackground(runAgentJob(sessionId, task));
 });
 
-router.post('/stop', validate(StopAgentSchema), (req: Request, res: Response) => {
+router.post('/stop', validate(StopAgentSchema), async (req: Request, res: Response) => {
   const body = req.body as z.infer<typeof StopAgentSchema>;
-  const running = getRunningSession();
+  const running = await getRunningSession();
 
   if (!running) {
     res.status(404).json({ error: 'NOT_RUNNING', detail: 'No agent is currently running' });
@@ -163,7 +192,7 @@ router.post('/stop', validate(StopAgentSchema), (req: Request, res: Response) =>
 
   requestAgentCancel(running.session_id);
 
-  appendAgentEvent(running.session_id, {
+  await appendAgentEvent(running.session_id, {
     type: 'stop_requested',
     label: 'Stop requested',
     detail: 'Halting agent after current step…',
@@ -177,10 +206,10 @@ router.post('/stop', validate(StopAgentSchema), (req: Request, res: Response) =>
   });
 });
 
-router.get('/run/status', (_req: Request, res: Response) => {
-  const running = getRunningSession();
+router.get('/run/status', async (_req: Request, res: Response) => {
+  const running = await getRunningSession();
   res.json({
-    running: isAnySessionRunning(),
+    running: await isAnySessionRunning(),
     groq_configured: Boolean(process.env.GROQ_API_KEY),
     session_id: running?.session_id ?? null,
   });

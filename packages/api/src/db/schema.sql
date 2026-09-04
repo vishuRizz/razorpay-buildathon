@@ -121,3 +121,21 @@ CREATE INDEX IF NOT EXISTS idx_audit_merchant  ON audit_log(merchant_id, timesta
 CREATE INDEX IF NOT EXISTS idx_audit_agent     ON audit_log(agent_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_action    ON audit_log(action, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp DESC);
+
+-- ----------------------------------------------------------------
+-- Agent Brain sessions (persisted for serverless / multi-instance)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  session_id  TEXT        PRIMARY KEY,
+  agent_id    TEXT,
+  task        TEXT,
+  model       TEXT,
+  status      TEXT        NOT NULL DEFAULT 'running',
+  -- running | complete | error | stopped
+  started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  events      JSONB       NOT NULL DEFAULT '[]'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_updated ON agent_sessions(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_status  ON agent_sessions(status, updated_at DESC);

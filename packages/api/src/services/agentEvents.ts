@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { query, queryOne } from '../db/client';
 
 export interface AgentEvent {
   id: string;
@@ -22,46 +23,62 @@ export interface AgentSession {
   events: AgentEvent[];
 }
 
-const sessions = new Map<string, AgentSession>();
-let latestSessionId: string | null = null;
-const MAX_SESSIONS = 20;
-const MAX_EVENTS = 300;
-
-function trimSessions() {
-  if (sessions.size <= MAX_SESSIONS) return;
-  const sorted = [...sessions.values()].sort(
-    (a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-  );
-  for (const s of sorted.slice(0, sessions.size - MAX_SESSIONS)) {
-    sessions.delete(s.session_id);
-    if (latestSessionId === s.session_id) {
-      latestSessionId = sorted[sorted.length - 1]?.session_id ?? null;
-    }
-  }
+interface AgentSessionRow {
+  session_id: string;
+  agent_id: string | null;
+  task: string | null;
+  model: string | null;
+  status: AgentSession['status'];
+  started_at: Date | string;
+  updated_at: Date | string;
+  events: AgentEvent[] | string;
 }
 
-export function startSession(input: {
+const MAX_EVENTS = 300;
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function rowToSession(row: AgentSessionRow): AgentSession {
+  const events =
+    typeof row.events === 'string' ? (JSON.parse(row.events) as AgentEvent[]) : row.events ?? [];
+  return {
+    session_id: row.session_id,
+    agent_id: row.agent_id ?? undefined,
+    task: row.task ?? undefined,
+    model: row.model ?? undefined,
+    status: row.status,
+    started_at: toIso(row.started_at),
+    updated_at: toIso(row.updated_at),
+    events,
+  };
+}
+
+export async function startSession(input: {
   session_id: string;
   agent_id?: string;
   task?: string;
-}): AgentSession {
+}): Promise<AgentSession> {
   const now = new Date().toISOString();
-  const session: AgentSession = {
-    session_id: input.session_id,
-    agent_id: input.agent_id,
-    task: input.task,
-    status: 'running',
-    started_at: now,
-    updated_at: now,
-    events: [],
-  };
-  sessions.set(input.session_id, session);
-  latestSessionId = input.session_id;
-  trimSessions();
-  return session;
+  const row = await queryOne<AgentSessionRow>(
+    `INSERT INTO agent_sessions (session_id, agent_id, task, status, started_at, updated_at, events)
+     VALUES ($1, $2, $3, 'running', $4::timestamptz, $4::timestamptz, '[]'::jsonb)
+     ON CONFLICT (session_id) DO UPDATE SET
+       agent_id = COALESCE(EXCLUDED.agent_id, agent_sessions.agent_id),
+       task = COALESCE(EXCLUDED.task, agent_sessions.task),
+       status = 'running',
+       updated_at = EXCLUDED.updated_at
+     RETURNING *`,
+    [input.session_id, input.agent_id ?? null, input.task ?? null, now]
+  );
+  if (!row) {
+    throw new Error('Failed to start agent session');
+  }
+  return rowToSession(row);
 }
 
-export function appendAgentEvent(
+export async function appendAgentEvent(
   sessionId: string,
   event: Omit<AgentEvent, 'id' | 'timestamp'> & {
     agent_id?: string;
@@ -69,16 +86,15 @@ export function appendAgentEvent(
     model?: string;
     session_status?: AgentSession['status'];
   }
-): AgentSession | null {
-  let session = sessions.get(sessionId);
+): Promise<AgentSession | null> {
+  let session = await getAgentSession(sessionId);
   if (!session) {
-    session = startSession({ session_id: sessionId, agent_id: event.agent_id, task: event.task });
+    session = await startSession({
+      session_id: sessionId,
+      agent_id: event.agent_id,
+      task: event.task,
+    });
   }
-
-  if (event.agent_id) session.agent_id = event.agent_id;
-  if (event.task) session.task = event.task;
-  if (event.model) session.model = event.model;
-  if (event.session_status) session.status = event.session_status;
 
   const entry: AgentEvent = {
     id: `evt_${nanoid(10)}`,
@@ -91,29 +107,53 @@ export function appendAgentEvent(
     meta: event.meta,
   };
 
-  session.events.push(entry);
-  if (session.events.length > MAX_EVENTS) {
-    session.events = session.events.slice(-MAX_EVENTS);
-  }
-  session.updated_at = entry.timestamp;
-  latestSessionId = sessionId;
+  const events = [...session.events, entry].slice(-MAX_EVENTS);
+  const status = event.session_status ?? session.status;
+  const agentId = event.agent_id ?? session.agent_id ?? null;
+  const task = event.task ?? session.task ?? null;
+  const model = event.model ?? session.model ?? null;
 
-  return session;
+  const row = await queryOne<AgentSessionRow>(
+    `UPDATE agent_sessions
+     SET agent_id = $2,
+         task = $3,
+         model = $4,
+         status = $5,
+         events = $6::jsonb,
+         updated_at = $7::timestamptz
+     WHERE session_id = $1
+     RETURNING *`,
+    [sessionId, agentId, task, model, status, JSON.stringify(events), entry.timestamp]
+  );
+
+  return row ? rowToSession(row) : null;
 }
 
-export function getAgentSession(sessionId: string): AgentSession | null {
-  return sessions.get(sessionId) ?? null;
+export async function getAgentSession(sessionId: string): Promise<AgentSession | null> {
+  const row = await queryOne<AgentSessionRow>(
+    `SELECT * FROM agent_sessions WHERE session_id = $1`,
+    [sessionId]
+  );
+  return row ? rowToSession(row) : null;
 }
 
-export function getLatestAgentSession(): AgentSession | null {
-  if (!latestSessionId) return null;
-  return sessions.get(latestSessionId) ?? null;
+export async function getLatestAgentSession(): Promise<AgentSession | null> {
+  const row = await queryOne<AgentSessionRow>(
+    `SELECT * FROM agent_sessions ORDER BY updated_at DESC LIMIT 1`
+  );
+  return row ? rowToSession(row) : null;
 }
 
-export function isAnySessionRunning(): boolean {
-  return [...sessions.values()].some((s) => s.status === 'running');
+export async function isAnySessionRunning(): Promise<boolean> {
+  const row = await queryOne<{ exists: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM agent_sessions WHERE status = 'running') AS exists`
+  );
+  return Boolean(row?.exists);
 }
 
-export function getRunningSession(): AgentSession | null {
-  return [...sessions.values()].find((s) => s.status === 'running') ?? null;
+export async function getRunningSession(): Promise<AgentSession | null> {
+  const row = await queryOne<AgentSessionRow>(
+    `SELECT * FROM agent_sessions WHERE status = 'running' ORDER BY updated_at DESC LIMIT 1`
+  );
+  return row ? rowToSession(row) : null;
 }

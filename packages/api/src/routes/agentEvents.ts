@@ -20,7 +20,7 @@ const PostEventSchema = z.object({
   label: z.string().optional(),
   detail: z.string().optional(),
   status: z.enum(['pending', 'active', 'ok', 'error']).optional(),
-  session_status: z.enum(['running', 'complete', 'error']).optional(),
+  session_status: z.enum(['running', 'complete', 'error', 'stopped']).optional(),
   meta: z.record(z.unknown()).optional(),
 });
 
@@ -28,18 +28,18 @@ const PostEventSchema = z.object({
  * POST /v1/agent-events
  * Append a live agent step (used by LLM demo → Agent Brain dashboard).
  */
-router.post('/', validate(PostEventSchema), (req: Request, res: Response) => {
+router.post('/', validate(PostEventSchema), async (req: Request, res: Response) => {
   const body = req.body as z.infer<typeof PostEventSchema>;
 
   if (body.type === 'session_start') {
-    startSession({
+    await startSession({
       session_id: body.session_id,
       agent_id: body.agent_id,
       task: body.task,
     });
   }
 
-  const session = appendAgentEvent(body.session_id, body);
+  const session = await appendAgentEvent(body.session_id, body);
   if (!session) {
     res.status(404).json({ error: 'NOT_FOUND', detail: 'Session not found' });
     return;
@@ -52,8 +52,8 @@ router.post('/', validate(PostEventSchema), (req: Request, res: Response) => {
  * GET /v1/agent-events/latest
  * Poll the most recent agent session (for Agent Brain dashboard).
  */
-router.get('/latest', (_req: Request, res: Response) => {
-  const session = getLatestAgentSession();
+router.get('/latest', async (_req: Request, res: Response) => {
+  const session = await getLatestAgentSession();
   if (!session) {
     res.json({ session: null });
     return;
@@ -64,8 +64,8 @@ router.get('/latest', (_req: Request, res: Response) => {
 /**
  * GET /v1/agent-events/:sessionId
  */
-router.get('/:sessionId', (req: Request, res: Response) => {
-  const session = getAgentSession(req.params.sessionId);
+router.get('/:sessionId', async (req: Request, res: Response) => {
+  const session = await getAgentSession(req.params.sessionId);
   if (!session) {
     res.status(404).json({ error: 'NOT_FOUND', detail: 'Session not found' });
     return;
