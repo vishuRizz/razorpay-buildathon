@@ -4,6 +4,10 @@
 
 Built for **Razorpay AI Buildathon 2026 · Track 01 (AI Growth & Agentic Commerce)**.
 
+<p align="center">
+  <img src="docs/assets/landing.jpg" alt="AISLE landing - Razorpay agent commerce layer" width="900" />
+</p>
+
 ### Live demo (deployed)
 
 Prefer not to run locally? Use the hosted dashboard:
@@ -15,6 +19,10 @@ Prefer not to run locally? Use the hosted dashboard:
 | **Policy Engine** | [https://razorpay-buildathon.vishu.codes/policy](https://razorpay-buildathon.vishu.codes/policy) |
 
 Open **Agent Brain** → pick a preset → **Launch**. Use **Policy Engine** to tune limits / custom rules.
+
+<p align="center">
+  <img src="docs/assets/agent-brain.jpg" alt="Agent Brain - live discover → search → policy → checkout" width="900" />
+</p>
 
 ### Local URLs
 
