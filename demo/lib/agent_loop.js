@@ -6,14 +6,13 @@
 const OpenAI = require('openai');
 const { TOOL_DEFINITIONS, executeTool } = require('./tools');
 
-// Prefer the fastest Groq model; avoid slow fallbacks on Vercel (60s ceiling)
-const MODEL_CANDIDATES = process.env.VERCEL
-  ? [process.env.GROQ_AGENT_MODEL, 'llama-3.1-8b-instant'].filter(Boolean)
-  : [
-      process.env.GROQ_AGENT_MODEL,
-      'llama-3.1-8b-instant',
-      'openai/gpt-oss-20b',
-    ].filter(Boolean);
+// Groq retired llama-3.1-8b-instant (Aug 2026). Current production IDs:
+// https://console.groq.com/docs/models
+const MODEL_CANDIDATES = [
+  process.env.GROQ_AGENT_MODEL,
+  'openai/gpt-oss-20b',
+  'qwen/qwen3.6-27b',
+].filter(Boolean);
 
 // Vercel serverless has a ~60s ceiling — keep the loop short
 const MAX_ITERATIONS = Number(
