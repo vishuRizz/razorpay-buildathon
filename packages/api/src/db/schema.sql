@@ -1,5 +1,5 @@
 -- ============================================================
--- AISLE — Database Schema (Neon / PostgreSQL)
+-- AISLE - Database Schema (Neon / PostgreSQL)
 -- ============================================================
 -- Run this once via: pnpm db:migrate
 
@@ -96,7 +96,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_agent       ON orders(agent_id, created_at
 CREATE INDEX IF NOT EXISTS idx_orders_razorpay    ON orders(razorpay_order_id);
 
 -- ----------------------------------------------------------------
--- Audit Log (APPEND-ONLY — never UPDATE or DELETE)
+-- Audit Log (APPEND-ONLY - never UPDATE or DELETE)
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_log (
   id            TEXT        PRIMARY KEY,

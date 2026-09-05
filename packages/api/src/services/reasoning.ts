@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { Product, AgentConstraints } from '../types';
 
 // ================================================================
-// Reasoning Trace Service — Claude-powered audit explanations
+// Reasoning Trace Service - Claude-powered audit explanations
 // ================================================================
 
 const FALLBACK = 'Reasoning trace unavailable.';
@@ -23,7 +23,7 @@ function getClient(): OpenAI {
  * Generate a 2-3 sentence human-readable trace explaining
  * why the agent selected this product given its task and constraints.
  *
- * Never throws — returns fallback string on any error.
+ * Never throws - returns fallback string on any error.
  */
 export async function generateTrace(
   agentTask: string,
@@ -73,13 +73,13 @@ Write only the 2-3 sentence explanation. No preamble.`;
     console.log(`[REASONING] Trace generated (${Date.now() - start}ms)`);
     return text;
   } catch (err) {
-    console.error('[REASONING] Groq API error — returning fallback:', err);
+    console.error('[REASONING] Groq API error - returning fallback:', err);
     return FALLBACK;
   }
 }
 
 /**
- * Generate a trace for a policy block — explains why an agent was blocked.
+ * Generate a trace for a policy block - explains why an agent was blocked.
  * Never throws.
  */
 export async function generateBlockTrace(

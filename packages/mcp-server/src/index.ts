@@ -4,8 +4,8 @@
  * Exposes commerce tools for any MCP-compatible agent (Cursor, Claude Desktop, Codex).
  *
  * Env:
- *   AISLE_API_URL   — default http://localhost:3001/v1
- *   AISLE_AIT_TOKEN — Agent Identity Token (required for cart/checkout)
+ *   AISLE_API_URL   - default http://localhost:3001/v1
+ *   AISLE_AIT_TOKEN - Agent Identity Token (required for cart/checkout)
  */
 
 import { config } from 'dotenv';
@@ -67,7 +67,7 @@ const TOOLS = [
   {
     name: 'aisle_suggest_upsell',
     description:
-      'Merchant growth agent — get complementary product suggestions for cart SKUs (e.g. adapter with WiFi).',
+      'Merchant growth agent - get complementary product suggestions for cart SKUs (e.g. adapter with WiFi).',
     inputSchema: {
       type: 'object' as const,
       properties: {

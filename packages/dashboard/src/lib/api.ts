@@ -1,8 +1,8 @@
-/** Backend origin. Local `pnpm dev` leaves this empty so Vite proxies /v1 → :3001 */
-const fromEnv = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
-export const API_BASE =
-  fromEnv ||
-  (import.meta.env.PROD ? 'https://razorpay-aisle-api.vercel.app' : '');
+/** Backend origin for API calls.
+ *  Local `pnpm dev`: leave unset - Vite proxies /v1 → http://localhost:3001
+ *  Production: set VITE_API_URL (or packages/dashboard/.env.production)
+ */
+export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export function apiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;

@@ -51,11 +51,14 @@ const TOOL_DEFINITIONS = [
     function: {
       name: 'search_catalog',
       description:
-        'Search products in a store catalog. Always filter by budget using max_price. Compare results across multiple stores before deciding.',
+        'List/search products in a store. Pass the exact store_id from discover_stores (never invent IDs from store names). Prefer max_price + in_stock=true. Use a short product noun for q (e.g. "granola", "earbuds") or omit q to browse the store.',
       parameters: {
         type: 'object',
         properties: {
-          store_id: { type: 'string' },
+          store_id: {
+            type: 'string',
+            description: 'Exact store_id from discover_stores, e.g. store_abc123 - NOT the store display name',
+          },
           category: { type: 'string' },
           in_stock: {
             type: 'string',
@@ -63,7 +66,10 @@ const TOOL_DEFINITIONS = [
             description: 'Set to "true" to only see in-stock items',
           },
           max_price: { type: 'integer', description: 'Maximum price in INR' },
-          q: { type: 'string', description: 'Natural language search — e.g. "lightweight 4G hotspot for beach trip"' },
+          q: {
+            type: 'string',
+            description: 'Short product keyword (optional). Avoid vague words like "useful" or "something".',
+          },
           search_mode: {
             type: 'string',
             enum: ['keyword', 'semantic', 'hybrid'],
@@ -79,7 +85,7 @@ const TOOL_DEFINITIONS = [
     function: {
       name: 'create_cart',
       description:
-        'Add items to cart at a store. Runs the Policy Engine — may block if limits are exceeded. Call only after choosing the best store and product.',
+        'Add items to cart at a store. Runs the Policy Engine - may block if limits are exceeded. Call only after choosing the best store and product.',
       parameters: {
         type: 'object',
         properties: {
@@ -155,7 +161,7 @@ const TOOL_DEFINITIONS = [
     function: {
       name: 'accept_upsell',
       description:
-        'Add a suggested upsell item to an existing cart. Increases merchant revenue — use when upsell fits the user task.',
+        'Add a suggested upsell item to an existing cart. Increases merchant revenue - use when upsell fits the user task.',
       parameters: {
         type: 'object',
         properties: {
@@ -203,7 +209,7 @@ const TOOL_DEFINITIONS = [
   },
 ];
 
-/** Small models often emit "3000" strings — coerce before API calls. */
+/** Small models often emit "3000" strings - coerce before API calls. */
 function normalizeToolArgs(args) {
   const out = { ...args };
   if (out.max_price != null) out.max_price = Number(out.max_price);
@@ -256,18 +262,44 @@ async function executeTool(name, rawArgs, ctx) {
     }
 
     case 'search_catalog': {
+      const storeId = String(args.store_id || '');
       const query = buildQuery({
         category: args.category,
-        in_stock: args.in_stock,
+        in_stock: args.in_stock ?? 'true',
         max_price: args.max_price,
         q: args.q,
         search_mode: args.search_mode,
       });
-      const { data, duration_ms } = await aisleRequest(
+      let { data, duration_ms } = await aisleRequest(
         'GET',
-        `/stores/${args.store_id}/catalog${query}`,
+        `/stores/${storeId}/catalog${query}`,
         { token }
       );
+
+      const empty =
+        !data ||
+        (Number(data.total) === 0 && !(data.products && data.products.length));
+
+      // Vague/mismatched q often returns 0 - fall back to browsing the store under budget
+      if (empty && (args.q || args.category)) {
+        const fallbackQuery = buildQuery({
+          in_stock: args.in_stock ?? 'true',
+          max_price: args.max_price,
+        });
+        const retry = await aisleRequest(
+          'GET',
+          `/stores/${storeId}/catalog${fallbackQuery}`,
+          { token }
+        );
+        duration_ms += retry.duration_ms;
+        data = {
+          ...retry.data,
+          note:
+            `No matches for q=${JSON.stringify(args.q || '')}. ` +
+            'Showing in-stock items under max_price instead. Pick one SKU and call create_cart NOW - do not search again.',
+        };
+      }
+
       return { ok: true, duration_ms, ...data };
     }
 

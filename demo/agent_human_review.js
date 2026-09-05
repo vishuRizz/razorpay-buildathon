@@ -35,7 +35,7 @@ async function api(method, path, body, token) {
 async function run() {
   console.log('\n' + colors.yellow + colors.bold +
     '╔══════════════════════════════════════════════════════════╗\n' +
-    '║  AISLE — Human Review Flow Demo                         ║\n' +
+    '║  AISLE - Human Review Flow Demo                         ║\n' +
     '╚══════════════════════════════════════════════════════════╝' + colors.reset);
   console.log(`\n${colors.bold}Scenario:${colors.reset} Agent buys above review threshold → Merchant must approve.\n`);
 
@@ -94,7 +94,7 @@ async function run() {
   for (let i = 0; i < 3; i++) {
     await sleep(2000);
     const status = await api('GET', `/stores/${STORE_ID}/orders/${order.order_id}/status`, null, ait.token);
-    console.log(`   Poll ${i + 1}: ${colors.yellow}${status.status}${colors.reset} — ${status.message ?? ''}`);
+    console.log(`   Poll ${i + 1}: ${colors.yellow}${status.status}${colors.reset} - ${status.message ?? ''}`);
     if (status.status !== 'PENDING_REVIEW') break;
   }
 

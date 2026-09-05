@@ -6,7 +6,7 @@ import { API_BASE } from '../lib/api';
 import {
   Brain, Radio, Search, Store, ShieldCheck, CreditCard, CheckCircle2,
   XCircle, Loader2, Zap, Clock, Play, Sparkles, ExternalLink, Square,
-  ArrowRight, Headphones, Package
+  ArrowRight, Activity, Copy, Banknote
 } from 'lucide-react';
 
 interface AgentEvent {
@@ -32,32 +32,21 @@ interface AgentSession {
 }
 
 const DEFAULT_TASK =
-  'Surprise me — buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
+  'Buy something useful under ₹2,000 from any AISLE store. Pick one product quickly and checkout.';
 
 const PRESETS = [
   { label: 'Surprise me', task: DEFAULT_TASK },
-  { label: 'Book + snack', task: 'Buy a paperback book and an organic snack under ₹1,000. Search BookNook and GreenSpoon.' },
-  { label: 'Home office', task: 'Set up a home office under ₹5,000 — monitor accessories or desk gear from TechVault and HomeBasics.' },
-  { label: 'Pet care', task: 'Buy something for my dog under ₹1,500 from PetPals — food, toy, or bed.' },
-  { label: 'Skincare', task: 'Build a basic skincare routine under ₹2,000 from BeautyBar.' },
+  { label: 'Book + snack', task: 'Buy a paperback under ₹500 from BookNook.' },
+  { label: 'Pet care', task: 'Buy something for my dog under ₹1,500 from PetPals.' },
+  { label: 'Skincare', task: 'Buy a vitamin C serum under ₹1,000 from BeautyBar.' },
   { label: 'Kids gift', task: 'Find a fun gift for an 8-year-old under ₹1,500 from KidZone.' },
   { label: 'Fitness', task: 'Buy home workout gear under ₹1,500 from FitZone.' },
-  { label: 'Goa WiFi', task: 'Buy portable WiFi for Goa under ₹3,000. Compare all connectivity stores.' },
-];
-
-const CATALOG_HIGHLIGHTS = [
-  { store: 'TechVault', name: '27" 4K IPS Monitor', price: '₹24,999', detail: 'USB-C · sRGB', icon: Package },
-  { store: 'BookNook', name: 'Atomic Habits', price: '₹399', detail: 'Paperback', icon: Package },
-  { store: 'BeautyBar', name: 'Vitamin C Serum', price: '₹899', detail: '30ml · brightening', icon: Sparkles },
-  { store: 'PetPals', name: 'Orthopedic Dog Bed', price: '₹2,499', detail: 'Medium · memory foam', icon: Package },
-  { store: 'GreenSpoon', name: 'Organic Granola', price: '₹449', detail: '500g · no palm oil', icon: Package },
-  { store: 'GadgetNest', name: 'boAt Airdopes 441', price: '₹1,799', detail: 'TWS · IPX5', icon: Headphones },
 ];
 
 const PIPELINE = [
   { id: 'task', label: 'Task', icon: Zap },
   { id: 'discover', label: 'Discover', icon: Store },
-  { id: 'compare', label: 'Compare', icon: Search },
+  { id: 'compare', label: 'Search', icon: Search },
   { id: 'policy', label: 'Policy', icon: ShieldCheck },
   { id: 'checkout', label: 'Checkout', icon: CreditCard },
 ] as const;
@@ -66,19 +55,20 @@ function eventIcon(type: string, meta?: Record<string, unknown>) {
   const tool = meta?.tool as string | undefined;
   if (type === 'session_start' || type === 'stop_requested' || type === 'stopped') {
     return type === 'stopped' ? (
-      <Square size={13} className="text-status-blocked" />
+      <Square size={14} className="text-status-blocked" />
     ) : (
-      <Zap size={13} className="text-foreground" />
+      <Zap size={14} className="text-foreground" />
     );
   }
-  if (type === 'done') return <CheckCircle2 size={13} className="text-green-600" />;
-  if (type === 'error') return <XCircle size={13} className="text-status-blocked" />;
-  if (tool === 'discover_stores') return <Store size={13} className="text-blue-600" />;
-  if (tool === 'search_catalog') return <Search size={13} className="text-blue-600" />;
-  if (tool === 'create_cart') return <ShieldCheck size={13} className="text-status-pending" />;
-  if (tool === 'checkout') return <CreditCard size={13} className="text-foreground" />;
-  if (tool === 'check_order_status') return <CheckCircle2 size={13} className="text-green-600" />;
-  return <Brain size={13} className="text-muted-foreground" />;
+  if (type === 'done') return <CheckCircle2 size={14} className="text-green-600" />;
+  if (type === 'error') return <XCircle size={14} className="text-status-blocked" />;
+  if (type === 'thinking') return <Loader2 size={14} className="text-blue-600 animate-spin" />;
+  if (tool === 'discover_stores') return <Store size={14} className="text-blue-600" />;
+  if (tool === 'search_catalog') return <Search size={14} className="text-blue-600" />;
+  if (tool === 'create_cart') return <ShieldCheck size={14} className="text-status-pending" />;
+  if (tool === 'checkout') return <CreditCard size={14} className="text-foreground" />;
+  if (tool === 'check_order_status') return <CheckCircle2 size={14} className="text-green-600" />;
+  return <Brain size={14} className="text-muted-foreground" />;
 }
 
 function formatTime(iso: string) {
@@ -93,7 +83,6 @@ function collapseEvents(events: AgentEvent[]): AgentEvent[] {
     const ev = events[i];
     if (skip.has(ev.id)) continue;
 
-    // Keep thinking only when it's the latest event (shows "waiting on model")
     if (ev.type === 'thinking') {
       if (i === events.length - 1) out.push(ev);
       continue;
@@ -126,13 +115,18 @@ function pipelineState(events: AgentEvent[]) {
   };
 }
 
-function statusLabel(status?: AgentSession['status']) {
+function statusMeta(status?: AgentSession['status']) {
   switch (status) {
-    case 'running': return { text: 'RUNNING', className: 'text-foreground' };
-    case 'complete': return { text: 'COMPLETE', className: 'text-green-600' };
-    case 'stopped': return { text: 'STOPPED', className: 'text-status-pending' };
-    case 'error': return { text: 'ERROR', className: 'text-status-blocked' };
-    default: return { text: 'IDLE', className: 'text-muted-foreground' };
+    case 'running':
+      return { text: 'Running', className: 'badge-approved', pulse: true };
+    case 'complete':
+      return { text: 'Complete', className: 'badge-approved', pulse: false };
+    case 'stopped':
+      return { text: 'Stopped', className: 'badge-pending', pulse: false };
+    case 'error':
+      return { text: 'Failed', className: 'badge-blocked', pulse: false };
+    default:
+      return { text: 'Idle', className: 'badge-neutral', pulse: false };
   }
 }
 
@@ -151,18 +145,18 @@ export default function AgentBrain() {
   const [launchError, setLaunchError] = useState('');
   const [groqOk, setGroqOk] = useState(true);
   const [error, setError] = useState('');
+  const [settling, setSettling] = useState(false);
+  const [settleMsg, setSettleMsg] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCount = useRef(0);
 
   const fetchSession = useCallback(async () => {
     try {
-      // Use /v1/brain/* — ad-blockers often block URLs containing "/agent/"
       const [{ data: latest }, { data: status }] = await Promise.all([
         axios.get<{ session: AgentSession | null }>('/v1/brain/events/latest'),
         axios.get<{ running: boolean; groq_configured: boolean }>('/v1/brain/run/status'),
       ]);
       setSession((prev) => {
-        // Avoid UI flicker when a poll briefly returns null
         if (!latest.session && prev?.status === 'running') return prev;
         return latest.session;
       });
@@ -227,7 +221,6 @@ export default function AgentBrain() {
     setLaunchError('');
     try {
       await axios.post('/v1/brain/stop', { session_id: session?.session_id });
-      // Optimistically unlock Launch even before next poll
       setSession((prev) =>
         prev
           ? {
@@ -254,7 +247,6 @@ export default function AgentBrain() {
           ? String(err.response.data.detail)
           : 'Failed to stop agent'
       );
-      // Still try to unlock UI if server says nothing is running
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         setSession((prev) => (prev ? { ...prev, status: 'stopped' } : prev));
       }
@@ -266,65 +258,145 @@ export default function AgentBrain() {
   const isRunning = session?.status === 'running' || launching;
   const timeline = collapseEvents(session?.events ?? []);
   const pipe = useMemo(() => pipelineState(session?.events ?? []), [session?.events]);
-  const st = statusLabel(session?.status);
+  const st = statusMeta(session?.status);
   const toolCalls = session?.events.filter((e) => e.type === 'tool_result').length ?? 0;
   const catalogSearches =
     session?.events.filter((e) => e.type === 'tool_result' && e.meta?.tool === 'search_catalog').length ?? 0;
+  const doneStages = PIPELINE.filter((s) => pipe[s.id as keyof typeof pipe]).length;
+  const progressPct = Math.round((doneStages / PIPELINE.length) * 100);
+
+  const razorpayCheckout = useMemo(() => {
+    const ev = [...(session?.events ?? [])]
+      .reverse()
+      .find(
+        (e) =>
+          e.type === 'tool_result' &&
+          e.meta?.tool === 'checkout' &&
+          e.status === 'ok'
+      );
+    if (!ev) return null;
+    const result = (ev.meta?.result ?? {}) as Record<string, unknown>;
+    return {
+      order_id: String(result.order_id ?? ''),
+      razorpay_order_id: String(result.razorpay_order_id ?? ''),
+      amount_inr: result.amount_inr as number | undefined,
+      status: String(result.status ?? 'CREATED'),
+    };
+  }, [session?.events]);
+
+  const settlePayment = async () => {
+    if (!razorpayCheckout?.razorpay_order_id) return;
+    setSettling(true);
+    setSettleMsg('');
+    try {
+      const { data } = await axios.post('/v1/demo/razorpay/settle', {
+        razorpay_order_id: razorpayCheckout.razorpay_order_id,
+      });
+      setSettleMsg(data.message ?? 'Payment settled');
+    } catch (err: unknown) {
+      setSettleMsg(
+        axios.isAxiosError(err) && err.response?.data?.detail
+          ? String(err.response.data.detail)
+          : 'Settle failed'
+      );
+    } finally {
+      setSettling(false);
+    }
+  };
+
+  const copyRzpId = async () => {
+    if (!razorpayCheckout?.razorpay_order_id) return;
+    try {
+      await navigator.clipboard.writeText(razorpayCheckout.razorpay_order_id);
+      setSettleMsg('Razorpay order id copied');
+    } catch {
+      setSettleMsg(razorpayCheckout.razorpay_order_id);
+    }
+  };
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full relative overflow-hidden">
+      {/* Atmospheric wash - keeps brand surface, not flat white */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 50% at 10% -10%, color-mix(in oklch, var(--status-info) 8%, transparent), transparent 55%), radial-gradient(ellipse 60% 40% at 90% 0%, color-mix(in oklch, var(--status-approved) 6%, transparent), transparent 50%)',
+        }}
+      />
+
       <div className="relative p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
         <PageHeader
           eyebrow="Autonomous Buyer"
           title="Agent Brain"
-          subtitle="13-store marketplace · 128 products · books, beauty, pets, tech, food, fitness, travel & more. Launch any shopping task."
+          subtitle="Launch a shopping agent. Watch discover → search → policy → checkout stream live."
           icon={
-            <div className="p-2.5 rounded-xl bg-foreground/5 border border-foreground/10">
+            <div className="p-2.5 rounded-2xl bg-foreground/[0.04] border border-foreground/10 shadow-sm">
               <Brain size={22} className="text-foreground" />
             </div>
           }
           badge={
-            session?.status === 'running' ? (
-              <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                <Radio size={10} className="live-dot" /> Live
-              </span>
-            ) : undefined
+            <span className={`badge ${st.className}`}>
+              {st.pulse && <Radio size={10} className="live-dot" />}
+              {st.text}
+            </span>
           }
           actions={
-            <div className="glass px-4 py-3 text-right">
-              <div className={`text-sm font-semibold font-mono ${st.className}`}>{st.text}</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                {session?.session_id?.slice(0, 16) ?? '—'}
+            <div className="text-right">
+              <div className="text-[10px] text-muted-foreground tracking-widest uppercase mb-1">Session</div>
+              <div className="font-mono text-xs text-foreground/80">
+                {session?.session_id?.slice(0, 18) ?? '-'}
               </div>
+              {session?.model && (
+                <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
+                  {session.model}
+                </div>
+              )}
             </div>
           }
         />
 
-        {/* Pipeline */}
-        <div className="card py-4 px-5 overflow-x-auto">
-          <div className="flex items-center gap-1 min-w-max">
+        {/* Pipeline progress */}
+        <div className="card !py-4 !px-5 animate-fade-up">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
+              Purchase pipeline
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground">{progressPct}%</span>
+          </div>
+          <div className="h-1 rounded-full bg-muted overflow-hidden mb-4">
+            <div
+              className="h-full rounded-full bg-foreground transition-all duration-700 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
             {PIPELINE.map((stage, i) => {
               const done = pipe[stage.id as keyof typeof pipe];
-              const active = isRunning && !done && (i === 0 || pipe[PIPELINE[i - 1].id as keyof typeof pipe]);
+              const active =
+                isRunning && !done && (i === 0 || pipe[PIPELINE[i - 1].id as keyof typeof pipe]);
               const Icon = stage.icon;
               return (
                 <React.Fragment key={stage.id}>
                   <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-300 ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-500 shrink-0 ${
                       done
-                        ? 'bg-foreground/5 border-foreground/15 text-foreground'
+                        ? 'bg-foreground text-background border-foreground shadow-sm'
                         : active
-                          ? 'bg-blue-50 border-blue-200 text-blue-600'
-                          : 'bg-muted border-border text-muted-foreground'
+                          ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-[0_0_0_3px_rgba(37,99,235,0.08)]'
+                          : 'bg-muted/60 border-border text-muted-foreground'
                     }`}
                   >
-                    <Icon size={14} />
-                    <span className="text-[10px] font-medium tracking-wide">{stage.label}</span>
-                    {done && <CheckCircle2 size={12} className="opacity-80" />}
-                    {active && <Loader2 size={12} className="animate-spin" />}
+                    {done ? <CheckCircle2 size={13} /> : active ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
+                    <span className="text-[11px] font-medium tracking-wide">{stage.label}</span>
                   </div>
                   {i < PIPELINE.length - 1 && (
-                    <ArrowRight size={14} className="text-muted-foreground/40 shrink-0 mx-0.5" />
+                    <ArrowRight
+                      size={12}
+                      className={`shrink-0 mx-0.5 transition-colors duration-500 ${
+                        done ? 'text-foreground/40' : 'text-muted-foreground/25'
+                      }`}
+                    />
                   )}
                 </React.Fragment>
               );
@@ -332,48 +404,70 @@ export default function AgentBrain() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-5">
-          {/* Left column */}
+        <div className="grid lg:grid-cols-12 gap-5 items-start">
+          {/* Control column */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Launch card */}
-            <div className="card border-foreground/10 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-primary/[0.06] to-transparent pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={14} className="text-foreground" />
-                  <span className="text-[10px] text-foreground tracking-widest font-semibold">MISSION_CONTROL</span>
+            <div className="card relative overflow-hidden !p-0">
+              <div
+                className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+                style={{
+                  background:
+                    'linear-gradient(180deg, color-mix(in oklch, var(--status-approved) 7%, transparent), transparent)',
+                }}
+              />
+              <div className="relative p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-foreground" />
+                    <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-foreground">
+                      Mission
+                    </span>
+                  </div>
+                  {marketplace && (
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      {marketplace.store_count} stores · {marketplace.product_count} SKUs
+                    </span>
+                  )}
                 </div>
+
                 <textarea
-                  className="input-field w-full text-xs min-h-[80px] resize-none mb-3 bg-background/80"
+                  className="input-field w-full text-sm !font-[inherit] min-h-[100px] resize-none leading-relaxed"
                   value={task}
                   onChange={(e) => setTask(e.target.value)}
                   disabled={isRunning}
+                  placeholder="Describe what the agent should buy…"
                 />
-                <div className="flex flex-wrap gap-1.5 mb-4">
+
+                <div className="flex flex-wrap gap-1.5">
                   {PRESETS.map((p) => (
                     <button
                       key={p.label}
                       type="button"
                       disabled={isRunning}
                       onClick={() => setTask(p.task)}
-                      className="text-[10px] px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors disabled:opacity-40"
+                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all disabled:opacity-40 ${
+                        task === p.task
+                          ? 'border-foreground/25 bg-foreground/[0.06] text-foreground'
+                          : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
+                      }`}
                     >
                       {p.label}
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex gap-2 pt-1">
                   <button
                     type="button"
                     id="launch-agent-btn"
                     onClick={launchAgent}
                     disabled={isRunning || !groqOk || task.trim().length < 10}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2 text-xs py-2.5 disabled:opacity-40"
+                    className="btn-primary flex-1 justify-center !py-2.5 !text-sm"
                   >
                     {launching ? (
-                      <><Loader2 size={14} className="animate-spin" /> Starting…</>
+                      <><Loader2 size={15} className="animate-spin" /> Starting…</>
                     ) : (
-                      <><Play size={14} fill="currentColor" /> Launch Agent</>
+                      <><Play size={15} fill="currentColor" /> Launch agent</>
                     )}
                   </button>
                   <button
@@ -381,190 +475,250 @@ export default function AgentBrain() {
                     id="stop-agent-btn"
                     onClick={stopAgent}
                     disabled={!isRunning || stopping}
-                    className="flex items-center justify-center gap-2 text-xs py-2.5 px-4 rounded-md border border-status-blocked/40 text-status-blocked bg-status-blocked/10 hover:bg-status-blocked/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="btn-danger !rounded-full !px-4 !py-2.5 inline-flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    {stopping ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Square size={14} fill="currentColor" />
-                    )}
+                    {stopping ? <Loader2 size={14} className="animate-spin" /> : <Square size={13} fill="currentColor" />}
                     Stop
                   </button>
                 </div>
+
                 {!groqOk && (
-                  <p className="text-[10px] text-status-pending mt-3">Set GROQ_API_KEY in .env</p>
+                  <p className="text-[11px] text-status-pending">Set GROQ_API_KEY in aisle/.env</p>
                 )}
                 {launchError && (
-                  <p className="text-[10px] text-status-blocked mt-3">{launchError}</p>
+                  <p className="text-[11px] text-status-blocked leading-relaxed">{launchError}</p>
                 )}
                 {session?.status === 'complete' && (
-                  <Link to="/live" className="inline-flex items-center gap-1 text-[10px] text-blue-600 mt-3 hover:underline">
-                    View audit in Live Feed <ExternalLink size={10} />
+                  <Link
+                    to="/live"
+                    className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 hover:underline"
+                  >
+                    Open Live Feed audit <ExternalLink size={11} />
                   </Link>
                 )}
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Compact run metrics */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'TOOLS', value: toolCalls },
-                { label: 'SEARCHES', value: catalogSearches },
-                { label: 'EVENTS', value: session?.events.length ?? 0 },
-              ].map((s) => (
-                <div key={s.label} className="card-elevated py-3 px-3 text-center">
-                  <div className="text-lg font-bold text-foreground">{s.value}</div>
-                  <div className="text-[8px] text-muted-foreground tracking-widest mt-0.5">{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Marketplace overview */}
-            <div className="card-elevated p-3 space-y-3">
-              <div className="text-[9px] text-muted-foreground tracking-widest">LIVE MARKETPLACE</div>
-              {marketplace ? (
-                <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'STORES', value: marketplace.store_count },
-                      { label: 'PRODUCTS', value: marketplace.product_count },
-                      { label: 'CATEGORIES', value: marketplace.category_count },
-                    ].map((s) => (
-                      <div key={s.label} className="text-center">
-                        <div className="text-xl font-bold font-mono text-foreground">{s.value}</div>
-                        <div className="text-[8px] text-muted-foreground tracking-widest">{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {marketplace.price_range_inr && (
-                    <div className="text-[10px] text-muted-foreground font-mono text-center">
-                      ₹{marketplace.price_range_inr.min.toLocaleString()} – ₹{marketplace.price_range_inr.max.toLocaleString()}
-                    </div>
-                  )}
-                  {marketplace.stores && marketplace.stores.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {marketplace.stores.slice(0, 12).map((s, i) => (
-                        <span
-                          key={`${s.name}-${i}`}
-                          className="text-[9px] px-2 py-0.5 rounded-full border border-border bg-muted/60 text-muted-foreground font-mono"
-                        >
-                          {s.name}
-                          <span className="text-foreground/50 ml-1">{s.product_count}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-[10px] text-muted-foreground font-mono text-center py-2">Loading marketplace…</div>
-              )}
-            </div>
-
-            {/* Catalog highlights */}
-            <div className="space-y-2">
-              <div className="text-[9px] text-muted-foreground tracking-widest px-1">SAMPLE LISTINGS</div>
-              {CATALOG_HIGHLIGHTS.map((p) => {
-                const Icon = p.icon;
+                { label: 'Tools', value: toolCalls, icon: Activity },
+                { label: 'Searches', value: catalogSearches, icon: Search },
+                { label: 'Events', value: session?.events.length ?? 0, icon: Zap },
+              ].map((s, i) => {
+                const Icon = s.icon;
                 return (
-                <div
-                  key={`${p.store}-${p.name}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/50 transition-colors"
-                >
-                  <div className="p-2 rounded-md bg-muted">
-                    <Icon size={14} className="text-muted-foreground" />
+                  <div
+                    key={s.label}
+                    className="card-elevated !py-3 !px-3 animate-fade-up"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                      <Icon size={11} />
+                      <span className="text-[9px] tracking-widest uppercase">{s.label}</span>
+                    </div>
+                    <div className="text-2xl font-display text-foreground leading-none">{s.value}</div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-muted-foreground">{p.store}</div>
-                    <div className="text-xs text-foreground font-medium truncate">{p.name}</div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-xs font-bold text-foreground">{p.price}</div>
-                    <div className="text-[9px] text-muted-foreground">{p.detail}</div>
-                  </div>
-                </div>
-              );})}
+                );
+              })}
             </div>
+
+            {marketplace?.stores && marketplace.stores.length > 0 && (
+              <div className="card-elevated !py-3.5 !px-4">
+                <div className="text-[9px] text-muted-foreground tracking-widest uppercase mb-2.5">
+                  Marketplace
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {marketplace.stores.slice(0, 10).map((s, i) => (
+                    <span
+                      key={`${s.name}-${i}`}
+                      className="text-[10px] px-2 py-1 rounded-md border border-border bg-muted/40 text-muted-foreground"
+                    >
+                      {s.name}
+                      <span className="text-foreground/45 ml-1 font-mono">{s.product_count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {razorpayCheckout?.razorpay_order_id && (
+              <div className="card border-green-200/80 bg-green-50/40 !p-4 space-y-3 animate-fade-up">
+                <div className="flex items-center gap-2">
+                  <Banknote size={14} className="text-green-700" />
+                  <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-green-800">
+                    Razorpay order
+                  </span>
+                </div>
+                <p className="text-[12px] text-foreground/80 leading-relaxed">
+                  Real <span className="font-medium">Orders API</span> create in test mode.
+                  Open Razorpay Dashboard → Orders and search this id.
+                </p>
+                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-card px-3 py-2">
+                  <code className="font-mono text-[11px] text-foreground flex-1 truncate">
+                    {razorpayCheckout.razorpay_order_id}
+                  </code>
+                  <button type="button" onClick={copyRzpId} className="btn-ghost !px-2 !py-1 !text-[10px]" title="Copy">
+                    <Copy size={12} />
+                  </button>
+                </div>
+                {razorpayCheckout.amount_inr != null && (
+                  <div className="text-[12px] font-mono text-foreground">
+                    ₹{Number(razorpayCheckout.amount_inr).toLocaleString()} · status {razorpayCheckout.status}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={settlePayment}
+                    disabled={settling}
+                    className="btn-primary !text-[11px] !py-2"
+                  >
+                    {settling ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                    Simulate payment.captured
+                  </button>
+                  <a
+                    href="https://dashboard.razorpay.com/app/orders"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-ghost !text-[11px] !py-2"
+                  >
+                    Razorpay Dashboard <ExternalLink size={11} />
+                  </a>
+                </div>
+                {settleMsg && (
+                  <p className="text-[11px] text-green-800 leading-relaxed">{settleMsg}</p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Trace panel */}
+          {/* Trace column */}
           <div className="lg:col-span-7">
-            <div className="card min-h-[560px] flex flex-col p-0 overflow-hidden border-border">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/80">
-                <div className="flex items-center gap-2">
+            <div className="card !p-0 overflow-hidden min-h-[620px] flex flex-col shadow-sm">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/40">
+                <div className="flex items-center gap-3">
                   <div className="flex gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-status-blocked/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-status-pending/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                    <span className="w-2 h-2 rounded-full bg-status-blocked/70" />
+                    <span className="w-2 h-2 rounded-full bg-status-pending/70" />
+                    <span className="w-2 h-2 rounded-full bg-green-500/70" />
                   </div>
-                  <span className="text-[10px] text-muted-foreground tracking-widest ml-2">agent_trace.log</span>
+                  <div>
+                    <div className="text-[11px] font-medium text-foreground">Live agent trace</div>
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      {isRunning ? 'streaming tool calls…' : 'waiting for launch'}
+                    </div>
+                  </div>
                 </div>
-                {isRunning && <Loader2 size={14} className="text-foreground animate-spin" />}
+                {isRunning && (
+                  <span className="badge badge-info">
+                    <Loader2 size={10} className="animate-spin" /> Live
+                  </span>
+                )}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 font-mono text-[11px]">
-                {error && <p className="text-status-blocked mb-4">{error}</p>}
+              <div className="flex-1 overflow-y-auto px-5 py-5">
+                {error && (
+                  <div className="mb-4 rounded-xl border border-status-blocked/25 bg-status-blocked/5 px-3 py-2.5 text-[12px] text-status-blocked">
+                    {error}
+                  </div>
+                )}
 
                 {!timeline.length && !isRunning && !error && (
-                  <div className="h-full flex flex-col items-center justify-center text-center py-16">
-                    <Brain size={40} className="text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground text-xs">Ready for mission</p>
-                    <p className="text-muted-foreground/50 text-[10px] mt-2 max-w-xs">
-                      Launch an agent to stream tool calls here in real time
-                    </p>
+                  <div className="empty-state !min-h-[420px]">
+                    <div className="empty-state-inner">
+                      <div className="empty-state-icon mx-auto">
+                        <Brain size={22} className="text-muted-foreground/50" />
+                      </div>
+                      <p className="font-display text-xl text-foreground mb-1">Ready when you are</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Write a shopping task, hit Launch, and watch the agent discover stores, search catalogs, pass policy, and checkout.
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {isRunning && !timeline.length && (
-                  <div className="flex items-center gap-2 text-foreground py-8 justify-center">
+                  <div className="flex items-center justify-center gap-2.5 text-foreground py-20">
                     <Loader2 size={18} className="animate-spin" />
-                    <span>Initializing agent…</span>
+                    <span className="text-sm">Initializing agent…</span>
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {timeline.map((ev, idx) => (
-                    <div
-                      key={ev.id}
-                      className={`animate-fade-up rounded-lg border px-3 py-2.5 ${
-                        ev.type === 'stopped' || ev.type === 'error'
-                          ? 'border-status-blocked/30 bg-status-blocked/5'
-                          : ev.type === 'done'
-                            ? 'border-green-200 bg-green-50'
-                            : 'border-border bg-background/60'
-                      }`}
-                      style={{ animationDelay: `${idx * 40}ms` }}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <div className="mt-0.5 p-1.5 rounded-md bg-muted border border-border shrink-0">
+                <div className="relative space-y-0">
+                  {timeline.length > 0 && (
+                    <div className="absolute left-[15px] top-3 bottom-3 w-px bg-border" />
+                  )}
+                  {timeline.map((ev, idx) => {
+                    const isFail = ev.type === 'stopped' || ev.type === 'error';
+                    const isDone = ev.type === 'done';
+                    const isThink = ev.type === 'thinking';
+                    return (
+                      <div
+                        key={ev.id}
+                        className="relative pl-10 pb-4 last:pb-0 animate-fade-up"
+                        style={{ animationDelay: `${Math.min(idx, 12) * 35}ms` }}
+                      >
+                        <div
+                          className={`absolute left-1.5 top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border bg-card shadow-sm ${
+                            isFail
+                              ? 'border-status-blocked/30'
+                              : isDone
+                                ? 'border-green-300'
+                                : isThink
+                                  ? 'border-blue-200'
+                                  : 'border-border'
+                          }`}
+                        >
                           {eventIcon(ev.type, ev.meta)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-foreground font-medium">{ev.label ?? ev.type}</span>
+
+                        <div
+                          className={`rounded-xl border px-3.5 py-3 transition-colors ${
+                            isFail
+                              ? 'border-status-blocked/25 bg-status-blocked/[0.04]'
+                              : isDone
+                                ? 'border-green-200 bg-green-50/80'
+                                : isThink
+                                  ? 'border-blue-100 bg-blue-50/50'
+                                  : 'border-border bg-card'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <span className="text-[13px] font-medium text-foreground">
+                              {ev.label ?? ev.type}
+                            </span>
                             {ev.step != null && (
-                              <span className="text-[9px] text-muted-foreground/70">#{ev.step}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground/70 mt-0.5">
+                                #{ev.step}
+                              </span>
                             )}
-                            <span className="text-[9px] text-muted-foreground/50 ml-auto flex items-center gap-1">
-                              <Clock size={9} /> {formatTime(ev.timestamp)}
+                            <span className="text-[10px] font-mono text-muted-foreground/50 ml-auto flex items-center gap-1 mt-0.5">
+                              <Clock size={10} /> {formatTime(ev.timestamp)}
                             </span>
                           </div>
+
                           {ev.detail != null && ev.detail !== '' && (
-                            <p className="text-muted-foreground mt-1.5 leading-relaxed break-words whitespace-pre-wrap">
+                            <p className="text-[12px] text-muted-foreground mt-1.5 leading-relaxed break-words whitespace-pre-wrap">
                               {typeof ev.detail === 'string' ? ev.detail : JSON.stringify(ev.detail, null, 2)}
                             </p>
                           )}
-                          {ev.type === 'thinking' && isRunning && (
-                            <p className="text-[10px] text-blue-600 mt-1 flex items-center gap-1">
-                              <Loader2 size={10} className="animate-spin" /> Waiting on model…
+
+                          {isThink && isRunning && (
+                            <p className="text-[11px] text-blue-600 mt-1.5 flex items-center gap-1.5">
+                              <Loader2 size={11} className="animate-spin" /> Waiting on model…
                             </p>
                           )}
+
                           {ev.meta?.duration_ms != null && (
-                            <span className="text-[9px] text-foreground/60">{String(ev.meta.duration_ms)}ms</span>
+                            <span className="inline-block mt-2 text-[10px] font-mono text-foreground/45">
+                              {String(ev.meta.duration_ms)}ms
+                            </span>
                           )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={bottomRef} />
                 </div>
               </div>

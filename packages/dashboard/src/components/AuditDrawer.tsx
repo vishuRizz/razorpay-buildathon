@@ -98,8 +98,8 @@ export default function AuditDrawer({ log, onClose }: AuditDrawerProps) {
           <div className="grid grid-cols-2 gap-2 mb-5">
             {[
               { label: 'STATUS',    value: <StatusBadge status={log.action} /> },
-              { label: 'DURATION',  value: log.duration_ms ? `${log.duration_ms}ms` : '—' },
-              { label: 'AGENT_ID',  value: log.agent_id ?? '—' },
+              { label: 'DURATION',  value: log.duration_ms ? `${log.duration_ms}ms` : '-' },
+              { label: 'AGENT_ID',  value: log.agent_id ?? '-' },
               { label: 'TIMESTAMP', value: new Date(log.timestamp).toLocaleTimeString() },
             ].map((m, i) => (
               <div key={i} className="bg-muted rounded border border-border p-2.5">

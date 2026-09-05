@@ -24,7 +24,9 @@ async function migrate() {
     console.log('  • orders');
     console.log('  • audit_log');
     console.log('  • agent_sessions');
-    console.log('\n🚀 Ready to seed: pnpm seed\n');
+    console.log('\nNext:');
+    console.log('  1. Start the stack:  pnpm dev');
+    console.log('  2. In another terminal: pnpm seed\n');
   } catch (err) {
     console.error('❌ Migration failed:', err);
     process.exit(1);

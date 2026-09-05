@@ -2,12 +2,14 @@
   "name": "aisle",
   "private": true,
   "version": "1.0.0",
-  "description": "AISLE — AI-to-AI Commerce Protocol Layer for Razorpay AI Buildathon 2026",
+  "description": "AISLE - AI-to-AI Commerce Protocol Layer for Razorpay AI Buildathon 2026",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n api,dashboard -c cyan,magenta \"pnpm --filter @aisle/api dev\" \"pnpm --filter @aisle/dashboard dev\"",
+    "dev": "concurrently -k -n api,dashboard -c cyan,magenta \"pnpm --filter @aisle/api dev\" \"pnpm --filter @aisle/dashboard dev\"",
+    "dev:api": "pnpm --filter @aisle/api dev",
+    "dev:dashboard": "pnpm --filter @aisle/dashboard dev",
     "build": "pnpm --filter @aisle/api build && pnpm --filter @aisle/dashboard build && pnpm --filter @aisle/mcp-server build",
     "mcp": "pnpm --filter @aisle/mcp-server dev",
     "db:migrate": "pnpm --filter @aisle/api db:migrate",

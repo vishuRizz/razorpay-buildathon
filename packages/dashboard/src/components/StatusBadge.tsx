@@ -7,6 +7,7 @@ interface StatusBadgeProps {
 
 const CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   CHECKOUT_SUCCESS:        { label: 'APPROVED',       className: 'badge-approved', icon: <CheckCircle2 size={9} /> },
+  PAYMENT_SETTLED:         { label: 'PAID',           className: 'badge-approved', icon: <CheckCircle2 size={9} /> },
   HUMAN_REVIEW_APPROVED:  { label: 'APPROVED',       className: 'badge-approved', icon: <ThumbsUp size={9} /> },
   HUMAN_REVIEW_REQUESTED: { label: 'REVIEW',         className: 'badge-pending',  icon: <Clock size={9} /> },
   POLICY_BLOCK:            { label: 'BLOCKED',        className: 'badge-blocked',  icon: <XCircle size={9} /> },

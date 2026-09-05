@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 export const auditStream = new EventEmitter();
 
 // ================================================================
-// Audit Log Service — append-only, never throws
+// Audit Log Service - append-only, never throws
 // ================================================================
 
 interface LogInput {
@@ -23,7 +23,7 @@ interface LogInput {
 
 /**
  * Appends an entry to the audit log.
- * Never throws — wraps in try/catch so logging never breaks the main flow.
+ * Never throws - wraps in try/catch so logging never breaks the main flow.
  * Returns the log entry ID.
  */
 export async function logAudit(entry: LogInput): Promise<string> {
@@ -84,7 +84,7 @@ export async function logAudit(entry: LogInput): Promise<string> {
     });
 
   } catch (err) {
-    // Log to console but never propagate — audit failure must not break commerce
+    // Log to console but never propagate - audit failure must not break commerce
     console.error('[AUDIT] Failed to write audit log entry:', err);
   }
 

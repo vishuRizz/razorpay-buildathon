@@ -31,5 +31,5 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-# Note: No Postgres service here — we use Neon (serverless Postgres).
+# Note: No Postgres service here - we use Neon (serverless Postgres).
 # DATABASE_URL in .env points to your Neon connection string.

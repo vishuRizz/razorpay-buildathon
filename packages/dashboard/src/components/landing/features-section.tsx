@@ -4,7 +4,7 @@ const features = [
   {
     number: "01",
     title: "Agent Commerce API",
-    description: "REST endpoints for store discovery, catalog search, cart, and Razorpay checkout — built for autonomous agents.",
+    description: "REST endpoints for store discovery, catalog search, cart, and Razorpay checkout - built for autonomous agents.",
     image: "/logo.png",
   },
   {
@@ -22,13 +22,13 @@ const features = [
   {
     number: "04",
     title: "Multi-Store Discovery",
-    description: "Agents compare catalogs across GadgetNest, ConnectHub, and more — structured JSON manifests, no HTML scraping.",
+    description: "Agents compare catalogs across GadgetNest, ConnectHub, and more - structured JSON manifests, no HTML scraping.",
     image: "/logo.png",
   },
   {
     number: "05",
     title: "Live Agent Brain",
-    description: "Launch an LLM tool-calling agent from the dashboard — watch discover → compare → policy → checkout live.",
+    description: "Launch an LLM tool-calling agent from the dashboard - watch discover → compare → policy → checkout live.",
     image: "/logo.png",
   },
   {
@@ -40,13 +40,13 @@ const features = [
   {
     number: "07",
     title: "Audit & Analytics",
-    description: "Every agent action logged with reasoning, policy verdicts, and Razorpay order IDs — full merchant visibility.",
+    description: "Every agent action logged with reasoning, policy verdicts, and Razorpay order IDs - full merchant visibility.",
     image: "/logo.png",
   },
   {
     number: "08",
     title: "UAP / ACP Aligned",
-    description: "Merchant-side layer complementing NPCI UAP and global agent-commerce protocols — Razorpay-native payments.",
+    description: "Merchant-side layer complementing NPCI UAP and global agent-commerce protocols - Razorpay-native payments.",
     image: "/logo.png",
   },
 ];

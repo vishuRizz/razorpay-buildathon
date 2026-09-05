@@ -2,7 +2,7 @@ import { query } from '../db/client';
 import { Product, CartItem } from '../types';
 
 // ================================================================
-// Merchant Growth Agent — contextual upsell suggestions
+// Merchant Growth Agent - contextual upsell suggestions
 // When an agent adds WiFi to cart → suggest travel adapter bundle
 // ================================================================
 
@@ -30,7 +30,7 @@ const UPSELL_RULES: UpsellRule[] = [
   {
     trigger_categories: ['wifi', 'connectivity', 'hotspot'],
     suggest_skus: ['ADAPTER-UNIVERSAL'],
-    reason: 'Pair your hotspot with a universal travel adapter — works in 150+ countries',
+    reason: 'Pair your hotspot with a universal travel adapter - works in 150+ countries',
     bundle_discount_percent: 5,
   },
   {

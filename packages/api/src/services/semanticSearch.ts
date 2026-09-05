@@ -1,7 +1,7 @@
 import { Product, ProductData } from '../types';
 
 // ================================================================
-// Semantic Catalog Search — hybrid keyword + concept scoring
+// Semantic Catalog Search - hybrid keyword + concept scoring
 // Enables queries like "lightweight 4G hotspot for beach trip"
 // without requiring a vector DB or external embedding API.
 // ================================================================

@@ -21,7 +21,7 @@ import {
 const router = Router();
 
 const DEFAULT_TASK =
-  'Surprise me — buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
+  'Buy something useful under ₹2,000 from any AISLE store. Pick one product quickly and checkout.';
 
 const RunAgentSchema = z.object({
   task: z.string().min(10).max(2000).optional(),
@@ -78,7 +78,7 @@ function scheduleBackground(job: Promise<void>): void {
     waitUntil(job);
     return;
   } catch {
-    // Local / package missing — still run the job in-process
+    // Local / package missing - still run the job in-process
   }
   void job.catch((err) => console.error('[AGENT RUN] Background job failed:', err));
 }

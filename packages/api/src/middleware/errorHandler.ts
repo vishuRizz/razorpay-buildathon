@@ -29,7 +29,7 @@ export class NotFoundError extends Error {
 }
 
 /**
- * Global error handler — catches all unhandled errors and returns structured JSON.
+ * Global error handler - catches all unhandled errors and returns structured JSON.
  */
 export function errorHandler(
   err: Error,

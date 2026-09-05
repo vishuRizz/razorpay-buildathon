@@ -18,6 +18,27 @@ const ProductDataSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+const CustomRuleSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  rule_type: z.enum(['spend_cap', 'category_block', 'velocity', 'geo_restrict', 'custom']),
+  threshold: z.string().max(120).optional(),
+  action: z.enum(['block', 'review', 'warn']),
+  enabled: z.boolean().optional().default(true),
+  created_at: z.string().optional(),
+});
+
+const PoliciesShape = z.object({
+  max_order_value: z.number().positive().optional(),
+  human_review_above: z.number().positive().optional(),
+  allowed_agent_types: z.array(z.string()).optional(),
+  discount_cap_percent: z.number().min(0).max(100).optional(),
+  daily_ai_gmv_cap: z.number().positive().optional(),
+  emergency_stop: z.boolean().optional(),
+  custom_rules: z.array(CustomRuleSchema).optional(),
+});
+
 const RegisterMerchantSchema = z.object({
   razorpay_key_id: z.string().startsWith('rzp_'),
   razorpay_key_secret: z.string().min(10),
@@ -30,26 +51,12 @@ const RegisterMerchantSchema = z.object({
       in_stock: z.boolean().default(true),
     })
   ).min(1),
-  policies: z.object({
-    max_order_value: z.number().positive().optional(),
-    human_review_above: z.number().positive().optional(),
-    allowed_agent_types: z.array(z.string()).optional(),
-    discount_cap_percent: z.number().min(0).max(100).optional(),
-    daily_ai_gmv_cap: z.number().positive().optional(),
-    emergency_stop: z.boolean().optional(),
-  }).default({}),
+  policies: PoliciesShape.default({}),
 });
 
 const UpdatePoliciesSchema = z.object({
   ai_buyers_enabled: z.boolean().optional(),
-  policies: z.object({
-    max_order_value: z.number().positive().optional(),
-    human_review_above: z.number().positive().optional(),
-    allowed_agent_types: z.array(z.string()).optional(),
-    discount_cap_percent: z.number().min(0).max(100).optional(),
-    daily_ai_gmv_cap: z.number().positive().optional(),
-    emergency_stop: z.boolean().optional(),
-  }).optional(),
+  policies: PoliciesShape.optional(),
 });
 
 /**
@@ -219,7 +226,7 @@ router.get('/:merchantId/analytics', async (req: Request, res: Response) => {
 
 /**
  * POST /v1/merchants/:merchantId/orders/:orderId/approve
- * Human review approval — creates Razorpay order.
+ * Human review approval - creates Razorpay order.
  */
 router.post('/:merchantId/orders/:orderId/approve', async (req: Request, res: Response) => {
   const { merchantId, orderId } = req.params;
@@ -279,7 +286,7 @@ router.post('/:merchantId/orders/:orderId/approve', async (req: Request, res: Re
 
 /**
  * POST /v1/merchants/:merchantId/orders/:orderId/reject
- * Human review rejection — cancels the order.
+ * Human review rejection - cancels the order.
  */
 router.post('/:merchantId/orders/:orderId/reject', async (req: Request, res: Response) => {
   const { merchantId, orderId } = req.params;

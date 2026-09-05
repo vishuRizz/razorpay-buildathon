@@ -28,7 +28,7 @@ export async function requireAIT(
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AgentTokenPayload;
 
-    // Check expiry (belt-and-suspenders — JWT already checks this)
+    // Check expiry (belt-and-suspenders - JWT already checks this)
     if (decoded.expires_at < Math.floor(Date.now() / 1000)) {
       res.status(403).json({
         error: 'TOKEN_EXPIRED',

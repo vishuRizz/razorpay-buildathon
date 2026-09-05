@@ -1,5 +1,5 @@
 // ============================================================
-// AISLE — Shared TypeScript Types
+// AISLE - Shared TypeScript Types
 // ============================================================
 
 export interface Merchant {
@@ -13,6 +13,17 @@ export interface Merchant {
   created_at: string;
 }
 
+export interface CustomPolicyRule {
+  id: string;
+  name: string;
+  description?: string;
+  rule_type: 'spend_cap' | 'category_block' | 'velocity' | 'geo_restrict' | 'custom';
+  threshold?: string;
+  action: 'block' | 'review' | 'warn';
+  enabled?: boolean;
+  created_at?: string;
+}
+
 export interface MerchantPolicies {
   max_order_value?: number;
   human_review_above?: number;
@@ -21,6 +32,7 @@ export interface MerchantPolicies {
   blocked_categories?: string[];
   daily_ai_gmv_cap?: number;
   emergency_stop?: boolean;
+  custom_rules?: CustomPolicyRule[];
 }
 
 export interface Product {

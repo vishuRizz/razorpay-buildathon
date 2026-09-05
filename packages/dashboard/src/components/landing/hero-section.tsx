@@ -97,7 +97,7 @@ export function HeroSection() {
             }`}
           >
             AISLE is the merchant-side complement to NPCI UAP and global agent-commerce protocols (ACP, AP2).
-            AI agents discover stores, compare catalogs, pass an 8-rule Policy Engine, and checkout via Razorpay —
+            AI agents discover stores, compare catalogs, pass an 8-rule Policy Engine, and checkout via Razorpay -
             every action bounded by Agent Identity Tokens and fully audited.
           </p>
           

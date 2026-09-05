@@ -1,8 +1,8 @@
 import { query, queryOne } from '../db/client';
-import { AgentTokenPayload, CartItem, MerchantPolicies, PolicyResult, Agent } from '../types';
+import { AgentTokenPayload, CartItem, MerchantPolicies, PolicyResult, Agent, CustomPolicyRule } from '../types';
 
 // ================================================================
-// AISLE Policy Engine — 9-Rule Safety Enforcer
+// AISLE Policy Engine - 9-Rule Safety Enforcer
 // Every checkout runs through this BEFORE any Razorpay call.
 // ================================================================
 
@@ -72,7 +72,7 @@ export class PolicyEngine {
     this.checkMerchantAIPolicy(merchantAiBuyersEnabled);
     if (this.block_reason) return this.buildResult(9);
 
-    // --- Rule 7: Human Review Threshold (soft — doesn't block) ---
+    // --- Rule 7: Human Review Threshold (soft - doesn't block) ---
     this.checkHumanReviewThreshold(
       cartTotal,
       merchantPolicies.human_review_above,
@@ -94,7 +94,11 @@ export class PolicyEngine {
     // --- Rule 11: Discount Cap (negotiated coupons) ---
     this.checkDiscountCap(discountPercent, merchantPolicies.discount_cap_percent);
 
-    return this.buildResult(11);
+    // --- Rule 12: Merchant custom policies (dashboard "Add policy") ---
+    this.checkCustomRules(cartItems, cartTotal, merchantPolicies.custom_rules);
+    if (this.block_reason) return this.buildResult(12);
+
+    return this.buildResult(12);
   }
 
   // ----------------------------------------------------------------
@@ -157,7 +161,7 @@ export class PolicyEngine {
     let currentDailySpend = agent.daily_spend_inr;
 
     if (resetDate.toDateString() !== now.toDateString()) {
-      currentDailySpend = 0; // New day — effectively reset
+      currentDailySpend = 0; // New day - effectively reset
     }
 
     if (currentDailySpend + cartTotal > dailyLimitInr) {
@@ -242,7 +246,7 @@ export class PolicyEngine {
   }
 
   // ----------------------------------------------------------------
-  // Rule 6: Human Review Threshold (soft — not a hard block)
+  // Rule 6: Human Review Threshold (soft - not a hard block)
   // ----------------------------------------------------------------
   private checkHumanReviewThreshold(
     cartTotal: number,
@@ -345,7 +349,7 @@ export class PolicyEngine {
   }
 
   // ----------------------------------------------------------------
-  // Rule 11: Discount Cap — enforces negotiated coupon bounds
+  // Rule 11: Discount Cap - enforces negotiated coupon bounds
   // ----------------------------------------------------------------
   private checkDiscountCap(requestedPercent: number, capPercent?: number): void {
     const cap = capPercent ?? 0;
@@ -383,6 +387,90 @@ export class PolicyEngine {
     this.rules_failed.push(rule);
     this.block_reason = detail;
     this.suggested_action = suggested_action;
+  }
+
+  // ----------------------------------------------------------------
+  // Rule 12: Custom merchant policies
+  // ----------------------------------------------------------------
+  private checkCustomRules(
+    cartItems: CartItem[],
+    cartTotal: number,
+    rules?: CustomPolicyRule[]
+  ): void {
+    if (!rules?.length) {
+      this.pass('CUSTOM_POLICY');
+      return;
+    }
+
+    for (const rule of rules) {
+      if (rule.enabled === false) continue;
+
+      const ruleId = `CUSTOM_${rule.rule_type.toUpperCase()}`;
+      let triggered = false;
+      let detail = '';
+
+      switch (rule.rule_type) {
+        case 'spend_cap': {
+          const cap = Number(rule.threshold);
+          if (Number.isFinite(cap) && cartTotal > cap) {
+            triggered = true;
+            detail = `Custom policy "${rule.name}": cart ₹${cartTotal} exceeds spend cap ₹${cap}`;
+          }
+          break;
+        }
+        case 'category_block': {
+          const needle = (rule.threshold ?? '').trim().toLowerCase();
+          if (needle) {
+            const hit = cartItems.some((item) =>
+              (item.categories ?? []).some((c) => String(c).toLowerCase().includes(needle))
+            );
+            if (hit) {
+              triggered = true;
+              detail = `Custom policy "${rule.name}": blocked category "${rule.threshold}"`;
+            }
+          }
+          break;
+        }
+        case 'velocity': {
+          // Soft signal - full velocity is Rule 4; custom velocity forces review/warn/block on any cart
+          triggered = true;
+          detail = `Custom policy "${rule.name}": velocity control active${rule.threshold ? ` (limit ${rule.threshold})` : ''}`;
+          break;
+        }
+        case 'geo_restrict': {
+          triggered = true;
+          detail = `Custom policy "${rule.name}": geo restriction active${rule.threshold ? ` (${rule.threshold})` : ''}`;
+          break;
+        }
+        case 'custom':
+        default: {
+          // Always apply named custom rule when present - merchant opted in
+          triggered = true;
+          detail =
+            rule.description?.trim() ||
+            `Custom policy "${rule.name}" enforced`;
+          break;
+        }
+      }
+
+      if (!triggered) continue;
+
+      if (rule.action === 'block') {
+        this.fail(ruleId, detail, 'Adjust cart or disable this custom policy');
+        return;
+      }
+      if (rule.action === 'review') {
+        this.requires_human_review = true;
+        this.warnings.push(detail);
+        this.pass(ruleId);
+        continue;
+      }
+      // warn
+      this.warnings.push(detail);
+      this.pass(ruleId);
+    }
+
+    this.pass('CUSTOM_POLICY');
   }
 
   private buildResult(totalRules: number): PolicyResult {

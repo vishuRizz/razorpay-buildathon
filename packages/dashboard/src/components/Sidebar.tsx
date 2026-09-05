@@ -20,7 +20,7 @@ export default function Sidebar() {
   const [inputId, setInputId] = useState(merchantId);
 
   return (
-    <aside className="w-60 bg-card border-r border-border flex flex-col h-full shrink-0">
+    <aside className="w-60 h-[100dvh] sticky top-0 bg-card border-r border-border flex flex-col shrink-0">
       <div className="px-5 pt-6 pb-5 border-b border-border">
         <Link to="/" className="block group">
           <img

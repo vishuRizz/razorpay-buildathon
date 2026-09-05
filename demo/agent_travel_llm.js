@@ -23,7 +23,7 @@ const { aisleRequest } = require('./lib/aisle_client');
 const { runAgentLoop } = require('./lib/agent_loop');
 
 const DEFAULT_TASK =
-  'Surprise me — buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
+  'Surprise me - buy something useful under ₹2,000 from any store on AISLE. Explore all catalogs, compare different product types, and pick the best match for a general shopper.';
 
 const colors = {
   reset: '\x1b[0m',
@@ -45,7 +45,7 @@ function onEvent(event) {
     case 'thinking':
       divider();
       console.log(
-        `${colors.magenta}🧠 STEP ${event.step}${colors.reset} ${colors.dim}— LLM planning (${event.model})…${colors.reset}`
+        `${colors.magenta}🧠 STEP ${event.step}${colors.reset} ${colors.dim}- LLM planning (${event.model})…${colors.reset}`
       );
       break;
     case 'model_fallback':
@@ -105,7 +105,7 @@ async function run() {
   const task = process.argv.slice(2).join(' ').trim() || DEFAULT_TASK;
 
   console.log('\n' + colors.cyan + colors.bold + '╔══════════════════════════════════════════════════════════════╗');
-  console.log('║       AISLE — LLM Tool-Calling Travel Agent                 ║');
+  console.log('║       AISLE - LLM Tool-Calling Travel Agent                 ║');
   console.log('╚══════════════════════════════════════════════════════════════╝' + colors.reset);
   console.log(`\n${colors.bold}Task:${colors.reset} "${task}"\n`);
 

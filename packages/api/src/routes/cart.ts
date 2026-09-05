@@ -237,7 +237,7 @@ router.patch('/:cartId', requireAIT, validate(UpdateCartSchema), async (req: Req
 
 /**
  * POST /v1/stores/:storeId/cart/:cartId/negotiate
- * Agent ↔ merchant negotiation — auto-applies coupon within discount_cap_percent.
+ * Agent ↔ merchant negotiation - auto-applies coupon within discount_cap_percent.
  */
 router.post(
   '/:cartId/negotiate',

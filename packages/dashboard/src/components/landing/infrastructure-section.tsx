@@ -70,7 +70,7 @@ export function InfrastructureSection() {
               agent commerce.
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-              AISLE is infrastructure — not a chatbot. Merchants publish structured catalogs,
+              AISLE is infrastructure - not a chatbot. Merchants publish structured catalogs,
               agents transact through bounded APIs, and every rupee is gated by policy before
               Razorpay processes payment.
             </p>

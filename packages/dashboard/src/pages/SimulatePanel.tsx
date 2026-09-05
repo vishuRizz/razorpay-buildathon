@@ -52,7 +52,7 @@ const SCENARIOS: Array<{
   {
     id: 'budget_fail',
     label: 'BUDGET_VIOLATION',
-    desc: 'Rogue agent tries to purchase beyond its session budget — Policy Engine intercepts',
+    desc: 'Rogue agent tries to purchase beyond its session budget - Policy Engine intercepts',
     agentName: 'UnrestrictedShopBot',
     budget: '₹500',
     expectedOutcome: 'POLICY_BLOCK',
@@ -62,7 +62,7 @@ const SCENARIOS: Array<{
   {
     id: 'human_review',
     label: 'HUMAN_REVIEW',
-    desc: 'High-value purchase exceeds merchant threshold — paused for human approval',
+    desc: 'High-value purchase exceeds merchant threshold - paused for human approval',
     agentName: 'EnterpriseAgent-v2',
     budget: '₹80,000',
     expectedOutcome: 'PENDING_REVIEW',
@@ -280,9 +280,9 @@ export default function SimulatePanel() {
               {result.outcome === 'SUCCESS' && (
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {[
-                    { label: 'PRODUCT', value: result.product ?? '—' },
+                    { label: 'PRODUCT', value: result.product ?? '-' },
                     { label: 'AMOUNT', value: `₹${result.amount_inr?.toLocaleString()}` },
-                    { label: 'ORDER_ID', value: result.order_id?.slice(-10) ?? '—' },
+                    { label: 'ORDER_ID', value: result.order_id?.slice(-10) ?? '-' },
                   ].map((f) => (
                     <div key={f.label} className="bg-background rounded border border-border p-2">
                       <div className="text-[9px] text-muted-foreground tracking-widest mb-0.5">{f.label}</div>

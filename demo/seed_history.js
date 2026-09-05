@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AISLE — Historical Data Seeder
+ * AISLE - Historical Data Seeder
  * Seeds 30 days of realistic agent commerce activity into the DB.
  * Run once: node demo/seed_history.js
  */
@@ -56,7 +56,7 @@ async function main() {
       
       const icon = result.outcome === 'SUCCESS' ? '✅' : result.outcome === 'BLOCKED' ? '🛡️' : '⏳';
       const label = result.outcome === 'SUCCESS'
-        ? `₹${result.amount_inr?.toLocaleString()} — ${result.product}`
+        ? `₹${result.amount_inr?.toLocaleString()} - ${result.product}`
         : result.outcome === 'BLOCKED'
         ? result.summary?.slice(0, 60)
         : 'Pending review';

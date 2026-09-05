@@ -2,7 +2,7 @@ import Razorpay from 'razorpay';
 import { GatewayError } from '../middleware/errorHandler';
 
 // ================================================================
-// Razorpay Service — SDK wrapper with retry + structured logging
+// Razorpay Service - SDK wrapper with retry + structured logging
 // ================================================================
 
 const razorpay = new Razorpay({

@@ -8,6 +8,7 @@ import { policyEngine } from '../services/policy';
 import { createRazorpayOrder } from '../services/razorpay';
 import { logAudit } from '../services/audit';
 import { generateTrace } from '../services/reasoning';
+import { settleRazorpayOrder } from './demoSettle';
 import { Cart, CartItem, Merchant, Order, Product } from '../types';
 
 const router = Router({ mergeParams: true });
@@ -216,6 +217,22 @@ router.post(
       duration_ms: Date.now() - start,
     });
 
+    // Demo: auto-simulate payment.captured so Live Feed shows settlement
+    // (real money capture still needs Checkout.js / UPI collect + Razorpay webhook)
+    const autoSettle =
+      process.env.AISLE_DEMO_AUTO_SETTLE === 'true' ||
+      (process.env.AISLE_DEMO_AUTO_SETTLE !== 'false' && process.env.NODE_ENV !== 'production');
+
+    let settled = false;
+    if (autoSettle) {
+      const settle = await settleRazorpayOrder({
+        razorpay_order_id: rzpOrder.id,
+        event: 'payment.captured',
+        source: 'demo',
+      });
+      settled = settle.ok;
+    }
+
     res.status(201).json({
       order_id: orderId,
       razorpay_order_id: rzpOrder.id,
@@ -223,7 +240,15 @@ router.post(
       subtotal_inr: cart.subtotal_inr,
       discount_inr: cart.discount_inr ?? 0,
       coupon_code: cart.coupon_code,
-      status: 'CREATED',
+      status: settled ? 'PAID' : 'CREATED',
+      razorpay: {
+        order_created: true,
+        dashboard_hint: 'Open Razorpay Dashboard → Orders (test mode) to see this order_id',
+        payment_captured: settled,
+        note: settled
+          ? 'Demo auto-settled via payment.captured path (same handler as webhook)'
+          : 'Order created on Razorpay. Await payment.captured webhook or POST /v1/demo/razorpay/settle',
+      },
       reasoning,
       audit_log_id: logId,
     });

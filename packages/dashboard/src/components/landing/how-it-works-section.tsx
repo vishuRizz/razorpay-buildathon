@@ -5,13 +5,13 @@ const experiences = [
     number: "01",
     title: "Issue Agent Token",
     description: "Agent requests identity token with budget limits (Step 1)",
-    code: `Agent requests an identity token with encoded budget limits and category constraints. Cryptographically signed — ₹3,000/session, connectivity + electronics allowed.`,
+    code: `Agent requests an identity token with encoded budget limits and category constraints. Cryptographically signed - ₹3,000/session, connectivity + electronics allowed.`,
   },
   {
     number: "02",
     title: "Discover & Compare",
     description: "Query stores, browse catalogs across merchants (Step 2)",
-    code: `Agent queries /v1/stores to find AI-enabled merchants. Searches catalogs at GadgetNest, ConnectHub — structured JSON, no scraping. Compares JioFi ₹2,499 vs Budget Hotspot ₹1,899.`,
+    code: `Agent queries /v1/stores to find AI-enabled merchants. Searches catalogs at GadgetNest, ConnectHub - structured JSON, no scraping. Compares JioFi ₹2,499 vs Budget Hotspot ₹1,899.`,
   },
   {
     number: "03",

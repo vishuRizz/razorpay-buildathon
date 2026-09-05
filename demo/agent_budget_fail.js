@@ -31,7 +31,7 @@ async function api(method, path, body, token) {
 async function run() {
   console.log('\n' + colors.red + colors.bold +
     '╔══════════════════════════════════════════════════════════╗\n' +
-    '║  AISLE — Budget Cap Failure Demo                         ║\n' +
+    '║  AISLE - Budget Cap Failure Demo                         ║\n' +
     '╚══════════════════════════════════════════════════════════╝' + colors.reset);
   console.log(`\n${colors.bold}Scenario:${colors.reset} Agent has ₹500 session limit. Tries to buy ₹2,499 item.\n`);
 
@@ -68,7 +68,7 @@ async function run() {
   console.log('─'.repeat(60));
 
   if (status === 422 && cartRes.error === 'POLICY_VIOLATION') {
-    console.log(colors.red + colors.bold + '\n🚫 POLICY VIOLATION — Cart blocked!\n' + colors.reset);
+    console.log(colors.red + colors.bold + '\n🚫 POLICY VIOLATION - Cart blocked!\n' + colors.reset);
     console.log(`  ${colors.bold}Error:${colors.reset}          ${cartRes.error}`);
     console.log(`  ${colors.bold}Rule Failed:${colors.reset}    ${cartRes.rule}`);
     console.log(`  ${colors.bold}Detail:${colors.reset}         ${cartRes.detail}`);

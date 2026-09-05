@@ -43,8 +43,8 @@ export default {
           muted: '#333333',
         },
         green: {
-          primary: '#76B900',    // Verde Vibrante — NVIDIA green
-          circuit: '#6EFA5F',    // Verde Circuito — success
+          primary: '#76B900',    // Verde Vibrante - NVIDIA green
+          circuit: '#6EFA5F',    // Verde Circuito - success
           dim: '#4A7A00',
           glow: 'rgba(118,185,0,0.15)',
         },

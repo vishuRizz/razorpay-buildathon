@@ -226,6 +226,14 @@
 }
 .event-new { animation: eventSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes char-in {
   0% { opacity: 0; filter: blur(40px); transform: translateY(100%); }
   100% { opacity: 1; filter: blur(0); transform: translateY(0); }

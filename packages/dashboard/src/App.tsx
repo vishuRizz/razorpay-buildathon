@@ -58,9 +58,9 @@ export default function App() {
 
 function DashboardLayout() {
   return (
-    <div className="flex min-h-[100dvh] overflow-hidden bg-background">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto h-screen bg-background">
+      <main className="flex-1 min-h-0 overflow-y-auto bg-background">
         <Outlet />
       </main>
     </div>

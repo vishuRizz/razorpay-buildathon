@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AISLE Demo: Travel Agent — Happy Path
+ * AISLE Demo: Travel Agent - Happy Path
  *
  * Task: "Buy a portable WiFi device for my trip to Goa, budget ₹3,000"
  *
@@ -63,7 +63,7 @@ async function api(method, path, body, token) {
 
 async function run() {
   console.log('\n' + colors.cyan + colors.bold + '╔══════════════════════════════════════════════════════════╗');
-  console.log('║           AISLE — AI Travel Agent Demo                  ║');
+  console.log('║           AISLE - AI Travel Agent Demo                  ║');
   console.log('╚══════════════════════════════════════════════════════════╝' + colors.reset);
   console.log(`\n🤖 ${colors.bold}Agent Task:${colors.reset} "${AGENT_TASK}"\n`);
 
@@ -88,7 +88,7 @@ async function run() {
   const { data: storesData, ms: storesMs } = await api('GET', '/stores?category=travel&ai_buyers_enabled=true', null, TOKEN);
   log('📦', 'Stores Found', `${storesData.total} stores available (${storesMs}ms)`, colors.green);
   storesData.stores.forEach((s, i) => {
-    console.log(`   ${i + 1}. ${colors.bold}${s.name}${colors.reset} [${s.store_id}] — ${s.ai_buyers_enabled ? '✅ AI enabled' : '❌ AI disabled'}`);
+    console.log(`   ${i + 1}. ${colors.bold}${s.name}${colors.reset} [${s.store_id}] - ${s.ai_buyers_enabled ? '✅ AI enabled' : '❌ AI disabled'}`);
   });
 
   if (storesData.stores.length === 0) {
@@ -112,7 +112,7 @@ async function run() {
   log('✅', 'Catalog', `Found ${catalog.total} eligible products within budget (${catalogMs}ms)`, colors.green);
 
   catalog.products.forEach((p, i) => {
-    console.log(`   ${i + 1}. ${colors.bold}${p.name}${colors.reset} — ₹${p.price_inr} | ${p.in_stock ? '✅ In stock' : '❌ Out of stock'}`);
+    console.log(`   ${i + 1}. ${colors.bold}${p.name}${colors.reset} - ₹${p.price_inr} | ${p.in_stock ? '✅ In stock' : '❌ Out of stock'}`);
     console.log(`      SKU: ${p.sku} | Categories: ${p.categories?.join(', ')}`);
   });
 
@@ -126,7 +126,7 @@ async function run() {
     log('❌', 'ERROR', 'No eligible products found within budget', colors.red);
     process.exit(1);
   }
-  log('✅', 'Selected', `${selected.name} (₹${selected.price_inr}) — cheapest in-stock match`, colors.green);
+  log('✅', 'Selected', `${selected.name} (₹${selected.price_inr}) - cheapest in-stock match`, colors.green);
 
   // ── Step 5: Add to Cart ──────────────────────────────────────
   divider();

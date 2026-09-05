@@ -27,6 +27,7 @@ interface LogEntry {
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
   CHECKOUT_SUCCESS:        <CheckCircle2 size={13} className="text-status-approved" />,
+  PAYMENT_SETTLED:         <CheckCircle2 size={13} className="text-status-approved" />,
   HUMAN_REVIEW_APPROVED:  <CheckCircle2 size={13} className="text-status-approved" />,
   POLICY_BLOCK:            <XCircle size={13} className="text-status-blocked" />,
   CHECKOUT_FAILED:         <XCircle size={13} className="text-status-blocked" />,
@@ -39,6 +40,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
 const ACTION_LABELS: Record<string, string> = {
   ADD_TO_CART:             'ADD_TO_CART',
   CHECKOUT_SUCCESS:        'CHECKOUT_SUCCESS',
+  PAYMENT_SETTLED:         'PAYMENT_SETTLED',
   CHECKOUT_FAILED:         'CHECKOUT_FAILED',
   POLICY_BLOCK:            'POLICY_BLOCK',
   DISCOVER:                'STORE_DISCOVER',
@@ -52,14 +54,14 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function getRowAccent(action: string) {
-  if (['CHECKOUT_SUCCESS', 'HUMAN_REVIEW_APPROVED'].includes(action)) return 'border-l-2 border-l-status-approved/40';
+  if (['CHECKOUT_SUCCESS', 'PAYMENT_SETTLED', 'HUMAN_REVIEW_APPROVED'].includes(action)) return 'border-l-2 border-l-status-approved/40';
   if (['HUMAN_REVIEW_REQUESTED'].includes(action)) return 'border-l-2 border-l-status-pending/40';
   if (['POLICY_BLOCK', 'CHECKOUT_FAILED', 'HUMAN_REVIEW_REJECTED'].includes(action)) return 'border-l-2 border-l-status-blocked/40';
   return 'border-l-2 border-l-transparent';
 }
 
 function AgentChip({ id, onClick }: { id: string, onClick?: (id: string) => void }) {
-  const short = id ? id.split('_').pop()?.slice(0, 8) ?? id.slice(0, 8) : '—';
+  const short = id ? id.split('_').pop()?.slice(0, 8) ?? id.slice(0, 8) : '-';
   return (
     <button onClick={() => onClick && onClick(id)} className="inline-flex items-center gap-1 bg-blue-50 rounded px-1.5 py-0.5 hover:bg-blue-electric/20 transition-colors">
       <Activity size={9} className="text-blue-600 shrink-0" />
@@ -155,7 +157,7 @@ export default function LiveFeed() {
 
   const stats = [
     { label: 'EVENTS', value: logs.length, color: 'text-foreground' },
-    { label: 'APPROVED', value: logs.filter(l => ['CHECKOUT_SUCCESS', 'HUMAN_REVIEW_APPROVED'].includes(l.action)).length, color: 'text-status-approved' },
+    { label: 'APPROVED', value: logs.filter(l => ['CHECKOUT_SUCCESS', 'PAYMENT_SETTLED', 'HUMAN_REVIEW_APPROVED'].includes(l.action)).length, color: 'text-status-approved' },
     { label: 'PENDING', value: logs.filter(l => l.action === 'HUMAN_REVIEW_REQUESTED').length, color: 'text-status-pending' },
     { label: 'BLOCKED', value: logs.filter(l => ['POLICY_BLOCK', 'CHECKOUT_FAILED'].includes(l.action)).length, color: 'text-status-blocked' },
   ];
@@ -283,16 +285,16 @@ export default function LiveFeed() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono text-foreground font-medium">
-                      {amount ? `₹${Number(amount).toLocaleString()}` : '—'}
+                      {amount ? `₹${Number(amount).toLocaleString()}` : '-'}
                     </td>
                     <td className="px-3 py-2.5">
                       <StatusBadge status={log.action} />
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground max-w-[180px] truncate font-mono italic">
-                      {log.reasoning ? `"${log.reasoning.slice(0, 55)}..."` : '—'}
+                      {log.reasoning ? `"${log.reasoning.slice(0, 55)}..."` : '-'}
                     </td>
                     <td className="px-3 py-2.5 text-right text-muted-foreground/50 font-mono">
-                      {log.duration_ms ?? '—'}
+                      {log.duration_ms ?? '-'}
                     </td>
                   </tr>
                 );

@@ -3,7 +3,7 @@ import path from 'path';
 config({ path: path.resolve(__dirname, '../../../.env') });
 import express, { Application } from 'express';
 import cors from 'cors';
-import { testConnection } from './db/client';
+import { getPool, testConnection } from './db/client';
 import { errorHandler } from './middleware/errorHandler';
 
 // Routes
@@ -17,14 +17,15 @@ import simulateRouter from './routes/simulate';
 import webhooksRouter from './routes/webhooks';
 import agentEventsRouter from './routes/agentEvents';
 import agentRunRouter from './routes/agentRun';
+import demoSettleRouter from './routes/demoSettle';
 
 const app: Application = express();
 const PORT = process.env.PORT ?? 3001;
 
 // ─── Middleware ───────────────────────────────────────────────
 // Reflect request Origin (hackathon: dashboard + previews on *.vercel.app).
-// credentials:false — dashboard uses bearer/AIT headers, not cookies.
-// no-store — avoid CDN serving a non-CORS response to the browser.
+// credentials:false - dashboard uses bearer/AIT headers, not cookies.
+// no-store - avoid CDN serving a non-CORS response to the browser.
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
@@ -78,12 +79,13 @@ app.use('/v1/simulate', simulateRouter);
 // Live agent brain events (LLM demo streaming)
 app.use('/v1/agent-events', agentEventsRouter);
 app.use('/v1/agent', agentRunRouter);
-// Aliases without "agent" in the path — some browser ad-blockers block /agent/ URLs
+// Aliases without "agent" in the path - some browser ad-blockers block /agent/ URLs
 app.use('/v1/brain/events', agentEventsRouter);
 app.use('/v1/brain', agentRunRouter);
 
-// Webhooks
+// Webhooks + demo settlement (test-mode pitch helper)
 app.use('/v1/webhooks', webhooksRouter);
+app.use('/v1/demo', demoSettleRouter);
 
 // Root → dashboard when it's a real public URL; otherwise API info (avoids localhost redirects on Vercel)
 const dashboardUrl = process.env.DASHBOARD_URL ?? 'http://localhost:5173';
@@ -113,7 +115,24 @@ app.use((_req, res) => {
 // ─── Global Error Handler ────────────────────────────────────
 app.use(errorHandler);
 
-// ─── Start (local / Docker only — Vercel uses the exported app) ─
+// ─── Start (local / Docker only - Vercel uses the exported app) ─
+async function ensureAgentSessionsTable(): Promise<void> {
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS agent_sessions (
+      session_id  TEXT        PRIMARY KEY,
+      agent_id    TEXT,
+      task        TEXT,
+      model       TEXT,
+      status      TEXT        NOT NULL DEFAULT 'running',
+      started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      events      JSONB       NOT NULL DEFAULT '[]'::jsonb
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_sessions_updated ON agent_sessions(updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_agent_sessions_status  ON agent_sessions(status, updated_at DESC);
+  `);
+}
+
 async function start() {
   console.log('\n🚀 AISLE Agent Commerce API\n');
 
@@ -124,7 +143,14 @@ async function start() {
     console.error('   Get your Neon connection string from: https://console.neon.tech');
     process.exit(1);
   }
-  console.log('✅ Neon database connected\n');
+  console.log('✅ Neon database connected');
+
+  try {
+    await ensureAgentSessionsTable();
+    console.log('✅ agent_sessions table ready\n');
+  } catch (err) {
+    console.error('⚠️  Could not ensure agent_sessions table:', err);
+  }
 
   app.listen(PORT, () => {
     console.log(`✅ API running at http://localhost:${PORT}`);

@@ -180,27 +180,32 @@ export async function forceStopSession(
  * Must be > worst-case Groq round-trip (often 30–60s) or polls will kill live runs.
  */
 export async function expireStaleRunningSessions(maxAgeSeconds = 240): Promise<void> {
-  await query(
-    `UPDATE agent_sessions
-     SET status = 'stopped',
-         updated_at = NOW(),
-         events = COALESCE(events, '[]'::jsonb) || $1::jsonb
-     WHERE status = 'running'
-       AND updated_at < NOW() - ($2::text || ' seconds')::interval`,
-    [
-      JSON.stringify([
-        {
-          id: `evt_stale_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          type: 'stopped',
-          label: 'Agent stopped',
-          detail: `Auto-stopped: no activity for ${maxAgeSeconds}s (serverless timeout or crash)`,
-          status: 'error',
-        },
-      ]),
-      String(maxAgeSeconds),
-    ]
-  );
+  try {
+    await query(
+      `UPDATE agent_sessions
+       SET status = 'stopped',
+           updated_at = NOW(),
+           events = COALESCE(events, '[]'::jsonb) || $1::jsonb
+       WHERE status = 'running'
+         AND updated_at < NOW() - ($2::text || ' seconds')::interval`,
+      [
+        JSON.stringify([
+          {
+            id: `evt_stale_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            type: 'stopped',
+            label: 'Agent stopped',
+            detail: `Auto-stopped: no activity for ${maxAgeSeconds}s (serverless timeout or crash)`,
+            status: 'error',
+          },
+        ]),
+        String(maxAgeSeconds),
+      ]
+    );
+  } catch (err) {
+    // Don't take down /run/status if the table is mid-migrate
+    console.warn('[agent_sessions] expireStaleRunningSessions failed:', err);
+  }
 }
 
 /** Keep stale-expiry from killing a live Groq wait. */

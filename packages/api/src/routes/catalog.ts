@@ -14,7 +14,7 @@ const router = Router({ mergeParams: true });
 
 /**
  * GET /v1/stores/:storeId/catalog/upsell
- * Merchant growth agent — suggest complementary products for cart SKUs.
+ * Merchant growth agent - suggest complementary products for cart SKUs.
  */
 router.get('/upsell', async (req: Request, res: Response) => {
   const start = Date.now();
@@ -46,8 +46,8 @@ router.get('/upsell', async (req: Request, res: Response) => {
  * GET /v1/stores/:storeId/catalog
  * List products with optional filters: category, in_stock, max_price, q (semantic search)
  * Query params:
- *   q — natural language search ("lightweight 4G hotspot for beach trip")
- *   search_mode — keyword | semantic | hybrid (default: hybrid when q present)
+ *   q - natural language search ("lightweight 4G hotspot for beach trip")
+ *   search_mode - keyword | semantic | hybrid (default: hybrid when q present)
  */
 router.get('/', async (req: Request, res: Response) => {
   const start = Date.now();

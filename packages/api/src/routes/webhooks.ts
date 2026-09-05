@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Razorpay from 'razorpay';
-import { query, queryOne } from '../db/client';
-import { logAudit } from '../services/audit';
-import { Order } from '../types';
+import { settleRazorpayOrder } from './demoSettle';
 
 const router = Router();
 
@@ -44,35 +42,18 @@ router.post('/razorpay', async (req: Request, res: Response) => {
 
   if (event.event === 'payment.captured' || event.event === 'order.paid') {
     const entity = event.payload.payment?.entity || event.payload.order?.entity;
-    const razorpayOrderId = entity.order_id || entity.id;
+    const razorpayOrderId = entity?.order_id || entity?.id;
+    const paymentId = event.payload.payment?.entity?.id;
 
     if (razorpayOrderId) {
-      // Find the order in our DB
-      const order = await queryOne<Order>(
-        `SELECT * FROM orders WHERE razorpay_order_id = $1`,
-        [razorpayOrderId]
-      );
-
-      if (order) {
-        // Update order status
-        await query(
-          `UPDATE orders SET status = 'PAID' WHERE id = $1`,
-          [order.id]
-        );
-
-        // Generate an audit log so it streams to the Live Feed
-        await logAudit({
-          agent_id: order.agent_id,
-          merchant_id: order.merchant_id,
-          action: 'PAYMENT_SETTLED' as any, // Cast as any if PAYMENT_SETTLED isn't in types yet
-          input: { razorpay_order_id: razorpayOrderId, event: event.event },
-          output: { order_id: order.id, status: 'PAID' },
-          duration_ms: 0,
-        });
-
-        console.log(`[WEBHOOK] Order ${order.id} marked as PAID via ${event.event}`);
-      } else {
-        console.warn(`[WEBHOOK] Order with Razorpay ID ${razorpayOrderId} not found.`);
+      const result = await settleRazorpayOrder({
+        razorpay_order_id: razorpayOrderId,
+        payment_id: paymentId,
+        event: event.event,
+        source: 'webhook',
+      });
+      if (!result.ok) {
+        console.warn(`[WEBHOOK] ${result.detail}`);
       }
     }
   }

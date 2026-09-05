@@ -176,7 +176,7 @@ export default function AuditLog() {
                     {new Date(log.timestamp).toLocaleString('en-US', { hour12: false })}
                   </td>
                   <td className="px-3 py-2.5 font-mono text-[10px] text-blue-600/70 max-w-[100px] truncate">
-                    {log.agent_id ? log.agent_id.split('_').pop()?.slice(0, 10) : '—'}
+                    {log.agent_id ? log.agent_id.split('_').pop()?.slice(0, 10) : '-'}
                   </td>
                   <td className="px-3 py-2.5 font-mono text-foreground/80 tracking-wide">
                     {log.action.replace(/_/g, '_')}
@@ -185,10 +185,10 @@ export default function AuditLog() {
                   <td className="px-3 py-2.5 text-muted-foreground max-w-[240px] truncate font-mono italic">
                     {log.error
                       ? <span className="text-status-blocked not-italic">{log.error}</span>
-                      : log.reasoning ? `"${log.reasoning.slice(0, 65)}..."` : '—'}
+                      : log.reasoning ? `"${log.reasoning.slice(0, 65)}..."` : '-'}
                   </td>
                   <td className="px-3 py-2.5 text-right text-muted-foreground/50 font-mono">
-                    {log.duration_ms ?? '—'}
+                    {log.duration_ms ?? '-'}
                   </td>
                 </tr>
               ))}

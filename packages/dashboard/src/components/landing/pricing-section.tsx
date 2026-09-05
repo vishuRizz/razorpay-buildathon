@@ -52,7 +52,7 @@ export function PricingSection() {
             Try It Live
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl">
-            Three modules to explore the full agent-commerce loop — from LLM agent to policy gate to merchant visibility.
+            Three modules to explore the full agent-commerce loop - from LLM agent to policy gate to merchant visibility.
           </p>
         </div>
 

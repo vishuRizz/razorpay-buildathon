@@ -14,7 +14,7 @@ const MODEL_CANDIDATES = [
   'qwen/qwen3.6-27b',
 ].filter(Boolean);
 
-// Vercel serverless has a ~60s ceiling — keep the loop short
+// Vercel serverless has a ~60s ceiling - keep the loop short
 const MAX_ITERATIONS = Number(
   process.env.AGENT_MAX_ITERATIONS ?? (process.env.VERCEL ? 6 : 20)
 );
@@ -54,7 +54,7 @@ async function completeWithFallback(client, messages, onEvent) {
 
   throw new Error(
     `No usable Groq model found. Tried: ${MODEL_CANDIDATES.join(', ')}. ` +
-      'Set GROQ_AGENT_MODEL in .env — see console.groq.com/docs/models'
+      'Set GROQ_AGENT_MODEL in .env - see console.groq.com/docs/models'
   );
 }
 
@@ -66,31 +66,25 @@ function buildSystemPrompt(constraints) {
 
   return `You are a fast autonomous shopping agent on the AISLE commerce protocol.
 
-Goal: finish the purchase quickly end-to-end. Prefer SPEED over exhaustive browsing.
+Goal: finish ONE purchase quickly. Do not browse forever.
 
-Workflow (keep it short):
-1. discover_stores — ai_buyers_enabled: "true" (one call)
-2. search_catalog — 1–2 targeted searches max from the user's task (natural-language q)
-3. create_cart — as soon as you have ONE in-budget product that fits. Do NOT keep searching.
-4. checkout — pay once via Razorpay
-5. check_order_status — then reply with a short text summary ONLY
+Workflow:
+1. discover_stores - ai_buyers_enabled:"true" (once)
+2. search_catalog - use the EXACT store_id field from discover_stores (e.g. store_8oDSNvd0akcV). NEVER invent IDs like store_GadgetNest from the name.
+   Prefer: max_price=<budget>, in_stock:"true", and either omit q OR use a short noun ("granola","earbuds","book").
+3. As soon as products[] is non-empty → create_cart with one SKU → checkout → check_order_status → short text summary.
 
-Optional (skip unless clearly useful):
-- read_store_manifest, accept_upsell, negotiate_discount
-
-Hard constraints (never violate):
+Hard constraints:
 - Session spending limit: ₹${constraints.spending_limit_per_session_inr}
 - Daily spending limit: ₹${constraints.spending_limit_per_day_inr}
 - Allowed categories: ${categories}
 - Human confirm threshold: ₹${constraints.requires_human_confirm_above_inr ?? 'none'}
 
-Critical rules:
-- After ≤2 catalog searches, pick the best in-budget hit and IMMEDIATELY create_cart then checkout
-- If a catalog search returns 0 products, try ONE different store/query — then buy or stop
-- Never invent SKUs or store IDs — only use tool results
-- Call checkout exactly ONCE
-- If policy blocks you, explain why and stop
-- Vague "surprise me" / "going out" → pick a useful under-budget item from the first good catalog hit — do not browse forever`;
+Rules:
+- Max 2 search_catalog calls. After the first non-empty catalog, buy immediately.
+- If results include a note about fallback browse items, pick one of those SKUs and create_cart - do not search again.
+- Never invent SKUs or store IDs
+- Checkout exactly once`;
 }
 
 /** Stop once checkout succeeded and that order was status-checked. */

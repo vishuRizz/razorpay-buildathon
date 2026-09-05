@@ -11,7 +11,28 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const { ALL_MERCHANTS, getCatalogStats } = require('./lib/marketplace_catalog');
 
-const BASE_URL = `http://localhost:${process.env.PORT ?? 3001}/v1`;
+const PORT = process.env.PORT ?? 3001;
+const BASE_URL = `http://localhost:${PORT}/v1`;
+const HEALTH_URL = `http://localhost:${PORT}/health`;
+
+async function waitForApi(retries = 40, delayMs = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(HEALTH_URL);
+      if (res.ok) return;
+    } catch {
+      // API not up yet
+    }
+    if (i === 0) {
+      console.log(`Waiting for API at ${HEALTH_URL} (start with: pnpm dev)...`);
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error(
+    `API not reachable at ${HEALTH_URL}. In another terminal run: pnpm dev\n` +
+      `Then retry: pnpm seed`
+  );
+}
 
 async function seed() {
   const stats = getCatalogStats();
@@ -21,8 +42,12 @@ async function seed() {
   console.log('Target API:', BASE_URL);
   console.log('');
 
+  await waitForApi();
+
   let totalProducts = 0;
   let successStores = 0;
+  /** @type {string[]} */
+  const merchantIds = [];
 
   for (const merchant of ALL_MERCHANTS) {
     try {
@@ -40,6 +65,7 @@ async function seed() {
 
       successStores += 1;
       totalProducts += data.products_registered ?? merchant.catalog.length;
+      merchantIds.push(data.merchant_id);
 
       console.log(`✅ ${merchant.store_name.padEnd(16)} ${String(data.products_registered).padStart(3)} products  →  ${data.merchant_id}`);
     } catch (err) {
@@ -48,13 +74,17 @@ async function seed() {
   }
 
   console.log('');
-  console.log(`✅ Done — ${successStores}/${ALL_MERCHANTS.length} stores · ${totalProducts} products live`);
+  console.log(`✅ Done - ${successStores}/${ALL_MERCHANTS.length} stores · ${totalProducts} products live`);
   console.log('');
-  console.log('AISLE has no store/product cap. Merchants join via POST /v1/merchants/register');
-  console.log('');
-  console.log('Try the agent:');
-  console.log('  Dashboard → Agent Brain → "Buy me anything under ₹2000"');
-  console.log('  node demo/agent_travel_llm.js "Find organic snacks and a book"\n');
+  if (merchantIds[0]) {
+    console.log('Paste a Merchant ID into the dashboard sidebar (Live Feed / Policy / Analytics):');
+    console.log(`  ${merchantIds[0]}`);
+    console.log('');
+  }
+  console.log('Next:');
+  console.log('  1. Open http://localhost:5173');
+  console.log('  2. Agent Brain → run a preset (no Merchant ID needed for Brain)');
+  console.log('  3. Or: node demo/agent_travel_llm.js "Find organic snacks and a book"\n');
 }
 
 seed();

@@ -1,5 +1,5 @@
 /**
- * AISLE Marketplace Catalog — 12 stores, 120+ products
+ * AISLE Marketplace Catalog - 12 stores, 120+ products
  * Programmatic generation keeps seed maintainable at scale.
  */
 
@@ -76,7 +76,7 @@ const CONNECTHUB = {
   description: 'Budget connectivity gear for reliable 4G on the go',
   policies: { max_order_value: 8000, human_review_above: 2500, discount_cap_percent: 8, daily_ai_gmv_cap: 25000 },
   catalog: generateCatalog('CH', [
-    ['WIFI-BUDGET', 'Budget 4G Hotspot', '100Mbps, 5 devices, 3hr battery — cheapest WiFi.', 1899, ['electronics', 'connectivity'], ['wifi', 'budget', '4g'], { battery_hours: 3 }],
+    ['WIFI-BUDGET', 'Budget 4G Hotspot', '100Mbps, 5 devices, 3hr battery - cheapest WiFi.', 1899, ['electronics', 'connectivity'], ['wifi', 'budget', '4g'], { battery_hours: 3 }],
     ['SIM-PREPAID', 'Travel Prepaid SIM 20GB', '30-day validity, multi-carrier India.', 499, ['travel', 'connectivity'], ['sim', 'data', 'prepaid'], { data_gb: 20 }],
     ['CABLE-USBC', 'USB-C Braided Cable 2m', 'Fast-charge nylon braided cable.', 349, ['electronics', 'accessories'], ['cable', 'usb-c'], { length_m: 2 }],
     ['WIFI-PRO', 'Pocket 4G Pro Hotspot', '200Mbps, 8 devices, 5hr battery.', 2799, ['electronics', 'connectivity'], ['wifi', '4g', 'pro'], { battery_hours: 5 }],
@@ -112,7 +112,7 @@ const STYLELANE = {
   description: 'Bags, accessories, and everyday fashion',
   policies: { max_order_value: 8000, human_review_above: 3500, discount_cap_percent: 12, daily_ai_gmv_cap: 35000 },
   catalog: generateCatalog('SL', [
-    ['TOTE-CANVAS', 'Canvas Tote — Work Edition', 'Laptop sleeve 14", zip pocket.', 899, ['fashion', 'bags'], ['tote', 'canvas', 'work'], {}],
+    ['TOTE-CANVAS', 'Canvas Tote - Work Edition', 'Laptop sleeve 14", zip pocket.', 899, ['fashion', 'bags'], ['tote', 'canvas', 'work'], {}],
     ['WALLET-RFID', 'RFID Slim Wallet', '8 cards, genuine leather.', 1199, ['fashion', 'accessories'], ['wallet', 'rfid'], {}],
     ['SUNGLASSES-POL', 'Polarized UV400 Sunglasses', 'Acetate frame + hard case.', 1499, ['fashion', 'eyewear'], ['sunglasses', 'polarized'], {}],
     ['SCARF-PASH', 'Pashmina Wrap Scarf', 'Lightweight blend, 180×70cm.', 749, ['fashion', 'accessories'], ['scarf', 'pashmina'], {}],
@@ -152,12 +152,12 @@ const BOOKNOOK = {
   description: 'Books, journals, and stationery for readers and creators',
   policies: { max_order_value: 5000, human_review_above: 2000, discount_cap_percent: 5, daily_ai_gmv_cap: 20000 },
   catalog: generateCatalog('BN', [
-    ['BOOK-ATOMIC', 'Atomic Habits — Paperback', 'James Clear. Build better habits.', 399, ['books', 'self-help'], ['book', 'habits'], {}],
-    ['BOOK-SAPIENS', 'Sapiens — Yuval Noah Harari', 'Brief history of humankind.', 499, ['books', 'history'], ['book', 'history'], {}],
+    ['BOOK-ATOMIC', 'Atomic Habits - Paperback', 'James Clear. Build better habits.', 399, ['books', 'self-help'], ['book', 'habits'], {}],
+    ['BOOK-SAPIENS', 'Sapiens - Yuval Noah Harari', 'Brief history of humankind.', 499, ['books', 'history'], ['book', 'history'], {}],
     ['BOOK-PSYCH', 'Thinking, Fast and Slow', 'Daniel Kahneman. Decision-making classic.', 549, ['books', 'psychology'], ['book', 'psychology'], {}],
     ['JOURNAL-DOT', 'Dot Grid Journal A5', '160 pages, hardcover, ribbon marker.', 449, ['stationery', 'office'], ['journal', 'notebook'], {}],
     ['PEN-GEL-3PC', 'Gel Pen Set 3-Pack', '0.5mm, smooth ink, assorted colours.', 199, ['stationery', 'office'], ['pen', 'gel'], {}],
-    ['BOOK-DEEP', 'Deep Work — Cal Newport', 'Rules for focused success.', 429, ['books', 'productivity'], ['book', 'productivity'], {}],
+    ['BOOK-DEEP', 'Deep Work - Cal Newport', 'Rules for focused success.', 429, ['books', 'productivity'], ['book', 'productivity'], {}],
     ['MARKERS-HIGH', 'Highlighter Set 6-Colour', 'Chisel tip, no bleed-through.', 249, ['stationery', 'office'], ['highlighter'], {}],
     ['BOOK-FICTION', 'The Midnight Library', 'Matt Haig. Bestselling fiction.', 399, ['books', 'fiction'], ['book', 'fiction'], {}],
     ['STAND-BOOK', 'Adjustable Book Stand', 'Metal holder for reading/cooking.', 599, ['stationery', 'home'], ['book stand'], {}],

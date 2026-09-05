@@ -7,7 +7,7 @@ const router = Router();
 
 /**
  * GET /v1/stores/stats
- * Marketplace overview — live store and product counts (no auth required).
+ * Marketplace overview - live store and product counts (no auth required).
  */
 router.get('/stats', async (_req: Request, res: Response) => {
   const [storeRow, productRow, categoryRows, priceRow, storeBreakdown] = await Promise.all([
@@ -108,13 +108,13 @@ router.get('/', async (req: Request, res: Response) => {
       policies: m.policies,
     })),
     total: filtered.length,
-    marketplace_note: 'No hard cap — merchants register via POST /v1/merchants/register',
+    marketplace_note: 'No hard cap - merchants register via POST /v1/merchants/register',
   });
 });
 
 /**
  * GET /v1/stores/:storeId/manifest
- * Get full store manifest — what the store sells, its policies, endpoints.
+ * Get full store manifest - what the store sells, its policies, endpoints.
  */
 router.get('/:storeId/manifest', async (req: Request, res: Response) => {
   const start = Date.now();

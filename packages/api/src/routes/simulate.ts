@@ -38,7 +38,7 @@ const SCENARIOS: Record<Scenario, {
     budget: 500,          // Tiny session budget
     dailyLimit: 1000,
     category: 'electronics',
-    maxPrice: 50000,      // Will try to buy expensive items — policy blocks it
+    maxPrice: 50000,      // Will try to buy expensive items - policy blocks it
   },
   human_review: {
     label: 'High-Value Human Review',
@@ -54,7 +54,7 @@ const SCENARIOS: Record<Scenario, {
 /**
  * POST /v1/simulate
  * Runs a complete end-to-end agent commerce scenario server-side.
- * No terminal needed — triggered from the dashboard.
+ * No terminal needed - triggered from the dashboard.
  */
 router.post('/', async (req: Request, res: Response) => {
   const scenario: Scenario = (req.body?.scenario as Scenario) ?? 'happy_path';
@@ -239,7 +239,7 @@ router.post('/', async (req: Request, res: Response) => {
         policy_result: policyResult,
         duration_ms: Date.now() - t4,
       });
-      addStep('POLICY_ENGINE', 'review', `Human review required — ₹${selData.price_inr.toLocaleString()} exceeds threshold`, Date.now() - t4);
+      addStep('POLICY_ENGINE', 'review', `Human review required - ₹${selData.price_inr.toLocaleString()} exceeds threshold`, Date.now() - t4);
 
       res.status(200).json({
         scenario, steps,
@@ -251,7 +251,7 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
-    // ── APPROVED — proceed to checkout ───────────────────────────
+    // ── APPROVED - proceed to checkout ───────────────────────────
     addStep('POLICY_ENGINE', 'ok', `APPROVED · ${policyResult.rules_passed?.length ?? 0} rules passed`, Date.now() - t4);
 
     await query(

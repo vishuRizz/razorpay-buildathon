@@ -52,7 +52,7 @@ async function emitAgentEvent(sessionId, payload) {
       body: JSON.stringify(body),
     });
   } catch {
-    // Dashboard streaming is best-effort — never block the agent
+    // Dashboard streaming is best-effort - never block the agent
   }
 }
 
