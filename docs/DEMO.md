@@ -74,6 +74,6 @@ node demo/agent_human_review.js
 | Policy Engine | Real, deterministic |
 | Razorpay | Real **Orders.create** in **test** mode |
 | Payment capture | Demo auto-settle in non-production (same webhook path as `payment.captured`) unless you wire live webhooks |
-| Agent Brain | Real Groq tool-calling loop |
+| Agent Brain | Real Anthropic or Groq tool-calling loop. After Policy APPROVED, checkout finishes without an extra LLM hop (needed on Vercel serverless time limits). |
 
 Honesty note for judges: we create a real test-mode Razorpay order; we do not collect UPI/card in the UI. Settlement for the pitch uses the documented demo settle path so Live Feed shows `PAYMENT_SETTLED`.

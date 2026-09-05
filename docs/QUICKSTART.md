@@ -10,7 +10,8 @@ Get AISLE running locally for development or judging.
 | pnpm **8+** | `npm install -g pnpm` |
 | Neon account | Free tier: https://console.neon.tech |
 | Razorpay test keys | https://dashboard.razorpay.com/app/keys |
-| Groq API key | https://console.groq.com/keys |
+| Groq API key | https://console.groq.com/keys (optional if using Anthropic) |
+| Anthropic API key | https://console.anthropic.com/ (**recommended** for Buildathon) |
 
 ## 2. Install
 
@@ -32,12 +33,16 @@ DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require
 RAZORPAY_KEY_ID=rzp_test_...
 RAZORPAY_KEY_SECRET=...
 JWT_SECRET=   # openssl rand -hex 32
-GROQ_API_KEY=gsk_...
+ANTHROPIC_API_KEY=sk-ant-...   # recommended (Razorpay Buildathon)
+# or: GROQ_API_KEY=gsk_...
+LLM_PROVIDER=auto              # anthropic | groq | auto
 ```
 
 Leave `PORT=3001` and `DASHBOARD_URL=http://localhost:5173` as-is for local demo.
 
 The API loads env from the **repo root** `.env` (`aisle/.env`).
+
+> **LLM tip:** If both keys are present, `LLM_PROVIDER=auto` prefers **Anthropic**. Set `LLM_PROVIDER=groq` to force Groq.
 
 ## 4. Migrate database
 
@@ -114,9 +119,15 @@ Start `pnpm dev` (or `pnpm dev:api`) before `pnpm seed`. Seed waits ~20s for `/h
 - Neon project must be active; use the **pooled** connection string with `sslmode=require`
 - Re-run `pnpm db:migrate`
 
-### Agent Brain: GROQ_API_KEY
+### Agent Brain: LLM key missing
 
-Add `GROQ_API_KEY` to `.env` and restart `pnpm dev`. Free Groq tier is enough for the demo.
+Add **`ANTHROPIC_API_KEY`** (recommended) or **`GROQ_API_KEY`** to `.env` and restart `pnpm dev`.
+
+Optional:
+```env
+LLM_PROVIDER=anthropic
+ANTHROPIC_AGENT_MODEL=claude-sonnet-4-20250514
+```
 
 ### Dashboard shows network / 500 errors
 

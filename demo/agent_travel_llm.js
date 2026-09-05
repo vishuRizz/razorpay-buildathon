@@ -9,7 +9,7 @@
  * Prerequisites:
  *   pnpm dev          (API running on :3001)
  *   pnpm seed         (merchants registered)
- *   GROQ_API_KEY in .env
+ *   ANTHROPIC_API_KEY or GROQ_API_KEY in .env (Anthropic recommended)
  *
  * Usage:
  *   node demo/agent_travel_llm.js

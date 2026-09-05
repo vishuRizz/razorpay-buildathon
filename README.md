@@ -4,10 +4,26 @@
 
 Built for **Razorpay AI Buildathon 2026 · Track 01 (AI Growth & Agentic Commerce)**.
 
+### Live demo (deployed)
+
+Prefer not to run locally? Use the hosted dashboard:
+
+| | |
+|---|---|
+| **App** | [https://razorpay-buildathon.vishu.codes/](https://razorpay-buildathon.vishu.codes/) |
+| **Agent Brain** | [https://razorpay-buildathon.vishu.codes/brain](https://razorpay-buildathon.vishu.codes/brain) |
+| **Policy Engine** | [https://razorpay-buildathon.vishu.codes/policy](https://razorpay-buildathon.vishu.codes/policy) |
+
+Open **Agent Brain** → pick a preset → **Launch**. Use **Policy Engine** to tune limits / custom rules.
+
+### Local URLs
+
 | | |
 |---|---|
 | **API** | http://localhost:3001 |
 | **Dashboard** | http://localhost:5173 |
+| **Agent Brain** | http://localhost:5173/brain |
+| **Policy Engine** | http://localhost:5173/policy |
 | **Health** | http://localhost:3001/health |
 
 ---
@@ -17,7 +33,7 @@ Built for **Razorpay AI Buildathon 2026 · Track 01 (AI Growth & Agentic Commerc
 - **Node.js 20+** and **pnpm** (`npm i -g pnpm`)
 - Free **[Neon](https://console.neon.tech)** Postgres database
 - **[Razorpay](https://dashboard.razorpay.com/app/keys)** test keys (`rzp_test_…`)
-- Free **[Groq](https://console.groq.com/keys)** API key (Agent Brain LLM)
+- An LLM key: **[Anthropic](https://console.anthropic.com/)** (recommended for Buildathon) **or** **[Groq](https://console.groq.com/keys)**
 
 ---
 
@@ -29,7 +45,7 @@ pnpm install
 
 # 2. Env
 cp .env.example .env
-# Edit .env: DATABASE_URL, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, JWT_SECRET, GROQ_API_KEY
+# Edit .env: DATABASE_URL, RAZORPAY_*, JWT_SECRET, and ANTHROPIC_API_KEY (or GROQ_API_KEY)
 
 # 3. Database schema (needs DATABASE_URL only)
 pnpm db:migrate
@@ -45,11 +61,13 @@ Open **http://localhost:5173** → **Agent Brain** → pick a preset → **Launc
 
 Copy a `store_…` id from the seed output into the sidebar Merchant ID field to use Live Feed, Policy Editor, and Analytics.
 
-Full walkthrough: **[docs/QUICKSTART.md](docs/QUICKSTART.md)** · Judge demo path: **[docs/DEMO.md](docs/DEMO.md)**
+Full walkthrough: **[docs/QUICKSTART.md](docs/QUICKSTART.md)** · Judge demo: **[docs/DEMO.md](docs/DEMO.md)** · LLM keys: **[docs/LLM.md](docs/LLM.md)**
 
 ---
 
 ## What judges should try
+
+**Fast path (no install):** [Agent Brain](https://razorpay-buildathon.vishu.codes/brain) → Launch a preset · [Policy Engine](https://razorpay-buildathon.vishu.codes/policy) → tweak a rule.
 
 1. **Agent Brain** - LLM tool-calling agent: discover → search → policy → Razorpay order
 2. **Policy Engine** - change limits / add a custom rule → re-run a cart that should block or review
@@ -67,7 +85,7 @@ node demo/agent_budget_fail.js     # session limit blocks checkout
 node demo/agent_human_review.js    # human review queue
 ```
 
-Agent Brain uses Groq (`openai/gpt-oss-20b`, fallback `qwen/qwen3.6-27b`). Override with `GROQ_AGENT_MODEL`.
+Agent Brain uses **Anthropic Claude** when `ANTHROPIC_API_KEY` is set (recommended), otherwise **Groq**. Force with `LLM_PROVIDER=anthropic|groq`. Models: `ANTHROPIC_AGENT_MODEL` (default `claude-sonnet-4-20250514`) or `GROQ_AGENT_MODEL`.
 
 ---
 
@@ -164,7 +182,7 @@ Then seed against the running API: `pnpm seed`
 | DB | Neon serverless Postgres |
 | Auth | JWT Agent Identity Tokens |
 | Payments | Razorpay Node SDK (test mode) |
-| Agent LLM | Groq (tool calling) |
+| Agent Brain / LLM | Anthropic Claude (recommended) or Groq |
 | Dashboard | React, Vite, Tailwind |
 | Agent I/O | MCP server |
 
@@ -175,7 +193,7 @@ Then seed against the running API: `pnpm seed`
 | Symptom | Fix |
 |---|---|
 | `pnpm seed` waits / fails | Start `pnpm dev` first; check http://localhost:3001/health |
-| Agent Brain error about Groq | Set `GROQ_API_KEY` in `.env`, restart `pnpm dev` |
+| Agent Brain stalls on "Waiting on model…" (Vercel) | Redeploy API with latest agent loop (fast-finish after Policy APPROVED). See [docs/LLM.md](docs/LLM.md#vercel--serverless) |
 | Dashboard API errors | Confirm API on :3001; local Vite proxies `/v1` |
 | Empty Live Feed | Paste a `store_…` Merchant ID from seed into the sidebar |
 | Razorpay errors | Use **test** keys only (`rzp_test_…`) |

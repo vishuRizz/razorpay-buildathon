@@ -76,7 +76,10 @@ function createDashboardEmitter({ sessionId, agentId, task }) {
           type: 'thinking',
           step: event.step,
           model: event.model,
-          label: `Planning (step ${event.step})`,
+          label:
+            event.meta?.fast_finish || event.model === 'fast-finish'
+              ? `Completing checkout (step ${event.step})`
+              : `Planning (step ${event.step})`,
           detail: event.model,
           status: 'active',
         });

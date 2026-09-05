@@ -123,7 +123,7 @@ GET  /v1/brain/sessions/:sessionId
 GET  /v1/brain/status
 ```
 
-Requires `GROQ_API_KEY`. Used by the dashboard Agent Brain page.
+Requires `ANTHROPIC_API_KEY` or `GROQ_API_KEY` (`LLM_PROVIDER=auto|anthropic|groq`). Used by the dashboard Agent Brain page.
 
 ---
 

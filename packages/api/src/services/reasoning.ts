@@ -1,22 +1,61 @@
+import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { Product, AgentConstraints } from '../types';
 
 // ================================================================
-// Reasoning Trace Service - Claude-powered audit explanations
+// Reasoning Trace Service - Anthropic or Groq
 // ================================================================
 
 const FALLBACK = 'Reasoning trace unavailable.';
 
-let client: OpenAI | null = null;
+function hasAnthropic() {
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+}
 
-function getClient(): OpenAI {
-  if (!client) {
-    client = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: 'https://api.groq.com/openai/v1',
+function hasGroq() {
+  return Boolean(process.env.GROQ_API_KEY?.trim());
+}
+
+function resolveProvider(): 'anthropic' | 'groq' | null {
+  const forced = (process.env.LLM_PROVIDER || 'auto').toLowerCase().trim();
+  if (forced === 'anthropic') return hasAnthropic() ? 'anthropic' : null;
+  if (forced === 'groq') return hasGroq() ? 'groq' : null;
+  if (hasAnthropic()) return 'anthropic';
+  if (hasGroq()) return 'groq';
+  return null;
+}
+
+async function completeText(prompt: string, maxTokens: number): Promise<string | null> {
+  const provider = resolveProvider();
+  if (!provider) return null;
+
+  if (provider === 'anthropic') {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const model = process.env.ANTHROPIC_AGENT_MODEL || 'claude-sonnet-4-20250514';
+    const response = await client.messages.create({
+      model,
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
     });
+    const text = response.content
+      .filter((b) => b.type === 'text')
+      .map((b) => ('text' in b ? String(b.text) : ''))
+      .join('\n')
+      .trim();
+    return text || null;
   }
-  return client;
+
+  const client = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+  });
+  const model = process.env.GROQ_REASONING_MODEL || 'openai/gpt-oss-20b';
+  const response = await client.chat.completions.create({
+    model,
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  return response.choices[0]?.message?.content?.trim() || null;
 }
 
 /**
@@ -61,19 +100,11 @@ Agent constraints: ${JSON.stringify(agentConstraints, null, 2)}
 Write only the 2-3 sentence explanation. No preamble.`;
 
   try {
-    const groq = getClient();
-    const response = await groq.chat.completions.create({
-      model: 'allam-2-7b',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const text = response.choices[0]?.message?.content?.trim() || FALLBACK;
-
+    const text = await completeText(prompt, 200);
     console.log(`[REASONING] Trace generated (${Date.now() - start}ms)`);
-    return text;
+    return text || FALLBACK;
   } catch (err) {
-    console.error('[REASONING] Groq API error - returning fallback:', err);
+    console.error('[REASONING] LLM error - returning fallback:', err);
     return FALLBACK;
   }
 }
@@ -88,23 +119,15 @@ export async function generateBlockTrace(
   rule: string
 ): Promise<string> {
   try {
-    const groq = getClient();
-    const response = await groq.chat.completions.create({
-      model: 'allam-2-7b',
-      max_tokens: 150,
-      messages: [
-        {
-          role: 'user',
-          content: `An AI shopping agent was blocked by a safety policy. Write one clear sentence explaining what happened.
+    const text = await completeText(
+      `An AI shopping agent was blocked by a safety policy. Write one clear sentence explaining what happened.
 Task: ${agentTask}
 Rule violated: ${rule}
 Reason: ${blockReason}
 Write only the explanation sentence.`,
-        },
-      ],
-    });
-
-    return response.choices[0]?.message?.content?.trim() || `Agent blocked: ${blockReason}`;
+      150
+    );
+    return text || `Agent blocked: ${blockReason}`;
   } catch {
     return `Agent blocked by policy rule ${rule}: ${blockReason}`;
   }

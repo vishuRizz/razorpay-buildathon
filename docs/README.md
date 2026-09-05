@@ -4,6 +4,7 @@
 |---|---|
 | [QUICKSTART.md](./QUICKSTART.md) | Anyone setting up the repo |
 | [DEMO.md](./DEMO.md) | Judges / pitch walkthrough |
+| [LLM.md](./LLM.md) | Anthropic + Groq setup |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | How the system fits together |
 | [API.md](./API.md) | HTTP endpoints |
 

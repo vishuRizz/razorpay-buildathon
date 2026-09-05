@@ -144,6 +144,7 @@ export default function AgentBrain() {
   const [stopping, setStopping] = useState(false);
   const [launchError, setLaunchError] = useState('');
   const [groqOk, setGroqOk] = useState(true);
+  const [llmProvider, setLlmProvider] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [settling, setSettling] = useState(false);
   const [settleMsg, setSettleMsg] = useState('');
@@ -154,13 +155,21 @@ export default function AgentBrain() {
     try {
       const [{ data: latest }, { data: status }] = await Promise.all([
         axios.get<{ session: AgentSession | null }>('/v1/brain/events/latest'),
-        axios.get<{ running: boolean; groq_configured: boolean }>('/v1/brain/run/status'),
+        axios.get<{
+          running: boolean;
+          llm_configured?: boolean;
+          llm_provider?: string | null;
+          anthropic_configured?: boolean;
+          groq_configured: boolean;
+        }>('/v1/brain/run/status'),
       ]);
       setSession((prev) => {
         if (!latest.session && prev?.status === 'running') return prev;
         return latest.session;
       });
-      setGroqOk(status.groq_configured);
+      const ok = status.llm_configured ?? status.groq_configured ?? status.anthropic_configured;
+      setGroqOk(Boolean(ok));
+      setLlmProvider(status.llm_provider ?? null);
       setError('');
     } catch (err: unknown) {
       const target = API_BASE || '(same origin / Vite proxy)';
@@ -483,7 +492,15 @@ export default function AgentBrain() {
                 </div>
 
                 {!groqOk && (
-                  <p className="text-[11px] text-status-pending">Set GROQ_API_KEY in aisle/.env</p>
+                  <p className="text-[11px] text-status-pending">
+                    Set <span className="font-mono">ANTHROPIC_API_KEY</span> (recommended) or{' '}
+                    <span className="font-mono">GROQ_API_KEY</span> in aisle/.env
+                  </p>
+                )}
+                {groqOk && llmProvider && (
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    LLM: {llmProvider === 'anthropic' ? 'Anthropic Claude' : 'Groq'}
+                  </p>
                 )}
                 {launchError && (
                   <p className="text-[11px] text-status-blocked leading-relaxed">{launchError}</p>

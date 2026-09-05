@@ -173,10 +173,21 @@ async function runAgentJob(sessionId: string, task: string): Promise<void> {
 }
 
 router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response) => {
-  if (!process.env.GROQ_API_KEY) {
+  const { isLlmConfigured, getLlmStatus } = loadDemoModule<{
+    isLlmConfigured: () => boolean;
+    getLlmStatus: () => {
+      configured: boolean;
+      provider: string | null;
+      anthropic_configured: boolean;
+      groq_configured: boolean;
+    };
+  }>('llm_provider.js');
+
+  if (!isLlmConfigured()) {
     res.status(503).json({
-      error: 'GROQ_NOT_CONFIGURED',
-      detail: 'Set GROQ_API_KEY in .env to run the LLM agent from the dashboard',
+      error: 'LLM_NOT_CONFIGURED',
+      detail:
+        'Set ANTHROPIC_API_KEY (recommended for Razorpay Buildathon) or GROQ_API_KEY in aisle/.env',
     });
     return;
   }
@@ -191,6 +202,7 @@ router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response
 
   const task = (req.body as z.infer<typeof RunAgentSchema>).task ?? DEFAULT_TASK;
   const sessionId = `sess_${nanoid(12)}`;
+  const llm = getLlmStatus();
 
   await startSession({ session_id: sessionId, task });
 
@@ -198,6 +210,7 @@ router.post('/run', validate(RunAgentSchema), async (req: Request, res: Response
     session_id: sessionId,
     status: 'running',
     task,
+    llm_provider: llm.provider,
   });
 
   // Return 202 immediately; keep work alive via waitUntil on Vercel
@@ -241,10 +254,22 @@ router.post('/stop', validate(StopAgentSchema), async (req: Request, res: Respon
 });
 
 router.get('/run/status', async (_req: Request, res: Response) => {
+  const { getLlmStatus } = loadDemoModule<{
+    getLlmStatus: () => {
+      configured: boolean;
+      provider: string | null;
+      anthropic_configured: boolean;
+      groq_configured: boolean;
+    };
+  }>('llm_provider.js');
+  const llm = getLlmStatus();
   const running = await getRunningSession();
   res.json({
     running: await isAnySessionRunning(),
-    groq_configured: Boolean(process.env.GROQ_API_KEY),
+    llm_configured: llm.configured,
+    llm_provider: llm.provider,
+    anthropic_configured: llm.anthropic_configured,
+    groq_configured: llm.groq_configured,
     session_id: running?.session_id ?? null,
   });
 });

@@ -47,9 +47,19 @@
 ## Agent Brain flow
 
 1. Dashboard `POST /v1/brain/run` with a natural-language task
-2. API issues/uses an AIT and starts a Groq tool-calling loop
+2. API issues/uses an AIT and starts an Anthropic or Groq tool-calling loop
 3. Tools call AISLE endpoints: discover → search → cart → checkout
 4. Events stream to the UI; session state persists in `agent_sessions`
+
+Provider selection (`LLM_PROVIDER`):
+
+| Value | Behavior |
+|---|---|
+| `auto` (default) | Anthropic if `ANTHROPIC_API_KEY` is set, else Groq |
+| `anthropic` | Require Anthropic |
+| `groq` | Require Groq |
+
+Recommended for Razorpay Buildathon judges: set `ANTHROPIC_API_KEY`.
 
 ## Data stores (Neon)
 

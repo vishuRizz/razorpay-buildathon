@@ -1,62 +1,24 @@
 /**
  * Generic LLM tool-calling loop for Aisle shopping agents.
- * Uses Groq (OpenAI-compatible API) with function calling.
+ * Providers: Anthropic (preferred) or Groq - see llm_provider.js
+ *
+ * Serverless note: after Policy APPROVED on create_cart we finish checkout
+ * without another LLM round-trip (Vercel maxDuration often kills mid-wait).
  */
 
-const OpenAI = require('openai');
 const { TOOL_DEFINITIONS, executeTool } = require('./tools');
+const { createAgentLlm, isLlmConfigured, resolveProvider } = require('./llm_provider');
 
-// Groq retired llama-3.1-8b-instant (Aug 2026). Current production IDs:
-// https://console.groq.com/docs/models
-const MODEL_CANDIDATES = [
-  process.env.GROQ_AGENT_MODEL,
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.6-27b',
-].filter(Boolean);
-
-// Vercel serverless has a ~60s ceiling - keep the loop short
+const ON_VERCEL = Boolean(process.env.VERCEL);
 const MAX_ITERATIONS = Number(
-  process.env.AGENT_MAX_ITERATIONS ?? (process.env.VERCEL ? 6 : 20)
+  process.env.AGENT_MAX_ITERATIONS ?? (ON_VERCEL ? 6 : 20)
 );
-
-function isModelNotFoundError(err) {
-  const msg = String(err?.message ?? err);
-  return err?.status === 404 || /does not exist|do not have access/i.test(msg);
-}
-
-function createCompletion(client, { model, messages }) {
-  return client.chat.completions.create({
-    model,
-    messages,
-    tools: TOOL_DEFINITIONS,
-    tool_choice: 'auto',
-    temperature: 0.2,
-  });
-}
-
-async function completeWithFallback(client, messages, onEvent) {
-  const tried = new Set();
-
-  for (const model of MODEL_CANDIDATES) {
-    if (tried.has(model)) continue;
-    tried.add(model);
-
-    try {
-      return { response: await createCompletion(client, { model, messages }), model };
-    } catch (err) {
-      if (!isModelNotFoundError(err)) throw err;
-      const next = MODEL_CANDIDATES.find((m) => !tried.has(m));
-      if (next) {
-        onEvent?.({ type: 'model_fallback', from: model, to: next });
-      }
-    }
-  }
-
-  throw new Error(
-    `No usable Groq model found. Tried: ${MODEL_CANDIDATES.join(', ')}. ` +
-      'Set GROQ_AGENT_MODEL in .env - see console.groq.com/docs/models'
-  );
-}
+const LLM_TIMEOUT_MS = Number(
+  process.env.AGENT_LLM_TIMEOUT_MS ?? (ON_VERCEL ? 28000 : 90000)
+);
+/** Skip extra LLM hops after an approved cart (default on). Set AGENT_FAST_FINISH=false to disable. */
+const FAST_FINISH =
+  process.env.AGENT_FAST_FINISH !== 'false';
 
 function buildSystemPrompt(constraints) {
   const categories =
@@ -104,6 +66,25 @@ function getCompletedPurchase(trace) {
   return null;
 }
 
+function findApprovedCart(trace) {
+  for (let i = trace.length - 1; i >= 0; i--) {
+    const entry = trace[i];
+    if (entry.tool !== 'create_cart' || !entry.result?.ok || !entry.result.cart_id) continue;
+    if (entry.result.requires_human_review) continue;
+    if (entry.result.policy_status && entry.result.policy_status !== 'APPROVED') continue;
+    return {
+      store_id: entry.result.store_id || entry.args?.store_id,
+      cart_id: entry.result.cart_id,
+      subtotal_inr: entry.result.subtotal_inr,
+    };
+  }
+  return null;
+}
+
+function alreadyCheckedOut(trace) {
+  return trace.some((t) => t.tool === 'checkout' && t.result?.ok);
+}
+
 function buildCompletionSummary({ checkout, status }) {
   const r = checkout.result;
   return (
@@ -125,7 +106,6 @@ class AgentCancelledError extends Error {
 
 function assertNotCancelled(shouldCancel) {
   const result = shouldCancel?.();
-  // Support both sync and async cancel checks (DB-backed stop on serverless)
   if (result && typeof result.then === 'function') {
     return result.then((cancelled) => {
       if (cancelled) throw new AgentCancelledError();
@@ -142,12 +122,40 @@ function truncate(value, max = 1200) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+/** Keep LLM context small on serverless (39 stores blows token/latency budget). */
+function slimToolResultForLlm(name, result) {
+  if (!result || typeof result !== 'object') return result;
+  if (name === 'discover_stores' && Array.isArray(result.stores)) {
+    return {
+      ...result,
+      stores: result.stores.slice(0, 8).map((s) => ({
+        store_id: s.store_id || s.id,
+        name: s.name,
+        ai_buyers_enabled: s.ai_buyers_enabled,
+      })),
+      note: result.stores.length > 8 ? `Showing 8 of ${result.stores.length} stores` : undefined,
+    };
+  }
+  if (name === 'search_catalog' && Array.isArray(result.products)) {
+    return {
+      ...result,
+      products: result.products.slice(0, 6).map((p) => ({
+        sku: p.sku,
+        name: p.name || p.data?.name,
+        price_inr: p.price_inr ?? p.data?.price_inr,
+        categories: p.categories || p.data?.categories,
+      })),
+    };
+  }
+  return result;
+}
+
 async function withHeartbeat(sessionId, work) {
   if (!sessionId) return work();
   const { emitAgentEvent } = require('./agent_events');
   const iv = setInterval(() => {
     emitAgentEvent(sessionId, { type: 'heartbeat' }).catch(() => {});
-  }, 15000);
+  }, ON_VERCEL ? 8000 : 15000);
   try {
     return await work();
   } finally {
@@ -155,16 +163,165 @@ async function withHeartbeat(sessionId, work) {
   }
 }
 
-async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agentId, shouldCancel }) {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY is required. Add it to aisle/.env');
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function runToolStep({ name, args, ctx, step, fireEvent, trace, shouldCancel }) {
+  await assertNotCancelled(shouldCancel);
+
+  await fireEvent({
+    type: 'tool_call',
+    step,
+    name,
+    args,
+  });
+
+  let result;
+  try {
+    result = await executeTool(name, args, ctx);
+    await fireEvent({
+      type: 'tool_result',
+      step,
+      name,
+      ok: true,
+      duration_ms: result.duration_ms,
+      preview: truncate(result),
+      result,
+    });
+  } catch (err) {
+    result = {
+      ok: false,
+      error: err.message,
+      status: err.status,
+      response: err.response,
+      duration_ms: err.duration_ms,
+    };
+    await fireEvent({
+      type: 'tool_result',
+      step,
+      name,
+      ok: false,
+      preview: truncate(result),
+    });
   }
+
+  trace.push({ step, tool: name, args, result });
+  return result;
+}
+
+/**
+ * After Policy APPROVED, finish checkout without another LLM round-trip.
+ * Critical on Vercel where the next model wait often exceeds maxDuration.
+ */
+async function fastFinishCheckout({
+  cart,
+  task,
+  ctx,
+  step,
+  fireEvent,
+  trace,
+  shouldCancel,
+  sessionId,
+  provider,
+  model,
+}) {
+  await fireEvent({
+    type: 'thinking',
+    step,
+    model: model || 'fast-finish',
+    meta: { provider, fast_finish: true },
+    label: 'Completing checkout',
+  });
+  await fireEvent({
+    type: 'provider',
+    label: 'Fast-finish checkout',
+    detail: ON_VERCEL
+      ? 'Skipping extra LLM hop (Vercel time budget) - policy already APPROVED'
+      : 'Skipping extra LLM hop - policy already APPROVED',
+    meta: { fast_finish: true },
+  });
+
+  const checkoutArgs = {
+    store_id: cart.store_id,
+    cart_id: cart.cart_id,
+    payment_method: 'razorpay_upi',
+    agent_confirm: true,
+    agent_reasoning: `Policy APPROVED for cart ${cart.cart_id} (₹${cart.subtotal_inr ?? '?'}). Completing Razorpay checkout.`,
+    agent_task: task,
+  };
+
+  const checkoutResult = await runToolStep({
+    name: 'checkout',
+    args: checkoutArgs,
+    ctx,
+    step,
+    fireEvent,
+    trace,
+    shouldCancel,
+  });
+
+  if (!checkoutResult?.ok || !checkoutResult.order_id) {
+    await fireEvent({
+      type: 'error',
+      label: 'Checkout failed',
+      detail: checkoutResult?.error || 'Checkout did not return order_id',
+      status: 'error',
+      session_status: 'error',
+    });
+    throw new Error(checkoutResult?.error || 'Fast-finish checkout failed');
+  }
+
+  await runToolStep({
+    name: 'check_order_status',
+    args: {
+      store_id: cart.store_id,
+      order_id: checkoutResult.order_id,
+    },
+    ctx,
+    step,
+    fireEvent,
+    trace,
+    shouldCancel,
+  });
+
+  const completed = getCompletedPurchase(trace);
+  if (completed) {
+    const finalText = buildCompletionSummary(completed);
+    await fireEvent({
+      type: 'done',
+      step,
+      content: finalText,
+      early_exit: true,
+      meta: { provider, model: model || 'fast-finish', fast_finish: true },
+    });
+    return { finalText, trace, steps: step, sessionId, provider, model: model || 'fast-finish', fast_finish: true };
+  }
+
+  throw new Error('Fast-finish completed checkout but order status check failed');
+}
+
+async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agentId, shouldCancel }) {
+  if (!isLlmConfigured()) {
+    throw new Error(
+      'Set ANTHROPIC_API_KEY (recommended for Buildathon) or GROQ_API_KEY in aisle/.env'
+    );
+  }
+
+  const llm = createAgentLlm(TOOL_DEFINITIONS, { timeoutMs: LLM_TIMEOUT_MS });
+  const provider = llm.provider;
 
   let dashboardEmit = null;
   if (sessionId) {
     const { createDashboardEmitter } = require('./agent_events');
     dashboardEmit = createDashboardEmitter({ sessionId, agentId, task });
-    await dashboardEmit({ type: 'session_start' });
+    await dashboardEmit({ type: 'session_start', meta: { provider } });
   }
 
   async function fireEvent(event) {
@@ -172,105 +329,130 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
     if (dashboardEmit) await dashboardEmit(event);
   }
 
-  const client = new OpenAI({
-    apiKey: process.env.GROQ_API_KEY,
-    baseURL: 'https://api.groq.com/openai/v1',
+  await fireEvent({
+    type: 'provider',
+    label: `LLM: ${provider}`,
+    detail: provider === 'anthropic' ? 'Anthropic Claude' : 'Groq',
+    meta: { provider, models: llm.models, llm_timeout_ms: LLM_TIMEOUT_MS, fast_finish: FAST_FINISH },
   });
 
-  const messages = [
-    { role: 'system', content: buildSystemPrompt(constraints) },
-    { role: 'user', content: task },
-  ];
+  const system = buildSystemPrompt(constraints);
+  const messages = [{ role: 'user', content: task }];
 
   const ctx = { token };
   const trace = [];
   let activeModel = null;
 
-  async function getCompletion(messagesForStep) {
-    if (activeModel) {
-      return createCompletion(client, { model: activeModel, messages: messagesForStep });
-    }
-    const { response, model } = await completeWithFallback(client, messagesForStep, fireEvent);
-    activeModel = model;
-    return response;
-  }
-
   for (let step = 1; step <= MAX_ITERATIONS; step++) {
     await assertNotCancelled(shouldCancel);
 
-    await fireEvent({ type: 'thinking', step, model: activeModel ?? MODEL_CANDIDATES[0] });
+    // Finish without another model call once policy has approved a cart
+    if (FAST_FINISH) {
+      const cart = findApprovedCart(trace);
+      if (cart && cart.store_id && !alreadyCheckedOut(trace)) {
+        return fastFinishCheckout({
+          cart,
+          task,
+          ctx,
+          step,
+          fireEvent,
+          trace,
+          shouldCancel,
+          sessionId,
+          provider,
+          model: activeModel,
+        });
+      }
+    }
+
+    await fireEvent({
+      type: 'thinking',
+      step,
+      model: activeModel ?? llm.models[0],
+      meta: { provider },
+    });
 
     await assertNotCancelled(shouldCancel);
-    const response = await withHeartbeat(sessionId, () => getCompletion(messages));
 
-    const message = response.choices[0]?.message;
-    if (!message) {
-      throw new Error('Empty response from LLM');
+    let turn;
+    try {
+      turn = await withHeartbeat(sessionId, () =>
+        withTimeout(
+          llm.complete({
+            system,
+            messages,
+            onFallback: (ev) => fireEvent(ev),
+          }),
+          LLM_TIMEOUT_MS,
+          `LLM (${provider})`
+        )
+      );
+    } catch (err) {
+      // If model hangs after an approved cart, still complete the purchase
+      const cart = findApprovedCart(trace);
+      if (FAST_FINISH && cart?.store_id && !alreadyCheckedOut(trace)) {
+        await fireEvent({
+          type: 'model_fallback',
+          from: activeModel ?? llm.models[0],
+          to: 'fast-finish',
+          detail: String(err.message || err),
+        });
+        return fastFinishCheckout({
+          cart,
+          task,
+          ctx,
+          step,
+          fireEvent,
+          trace,
+          shouldCancel,
+          sessionId,
+          provider,
+          model: 'fast-finish',
+        });
+      }
+      throw err;
     }
 
-    messages.push(message);
+    activeModel = turn.model;
+    turn.appendAssistant(messages);
 
-    if (!message.tool_calls?.length) {
-      const finalText = message.content?.trim() ?? 'Agent finished without a summary.';
-      await fireEvent({ type: 'done', step, content: finalText });
-      return { finalText, trace, messages, steps: step, sessionId };
-    }
-
-    for (const toolCall of message.tool_calls) {
-      await assertNotCancelled(shouldCancel);
-
-      const fn = toolCall.function;
-      let args;
-
-      try {
-        args = JSON.parse(fn.arguments);
-      } catch {
-        args = {};
+    if (!turn.toolCalls?.length) {
+      // Model returned text only - try to finish if cart exists
+      const cart = findApprovedCart(trace);
+      if (FAST_FINISH && cart?.store_id && !alreadyCheckedOut(trace)) {
+        return fastFinishCheckout({
+          cart,
+          task,
+          ctx,
+          step,
+          fireEvent,
+          trace,
+          shouldCancel,
+          sessionId,
+          provider,
+          model: activeModel,
+        });
       }
 
-      await fireEvent({
-        type: 'tool_call',
-        step,
-        name: fn.name,
+      const finalText = turn.text || 'Agent finished without a summary.';
+      await fireEvent({ type: 'done', step, content: finalText, meta: { provider, model: activeModel } });
+      return { finalText, trace, messages, steps: step, sessionId, provider, model: activeModel };
+    }
+
+    for (const toolCall of turn.toolCalls) {
+      const args = toolCall.args ?? {};
+      const result = await runToolStep({
+        name: toolCall.name,
         args,
+        ctx,
+        step,
+        fireEvent,
+        trace,
+        shouldCancel,
       });
 
-      let result;
-      try {
-        result = await executeTool(fn.name, args, ctx);
-        await fireEvent({
-          type: 'tool_result',
-          step,
-          name: fn.name,
-          ok: true,
-          duration_ms: result.duration_ms,
-          preview: truncate(result),
-          result,
-        });
-      } catch (err) {
-        result = {
-          ok: false,
-          error: err.message,
-          status: err.status,
-          response: err.response,
-          duration_ms: err.duration_ms,
-        };
-        await fireEvent({
-          type: 'tool_result',
-          step,
-          name: fn.name,
-          ok: false,
-          preview: truncate(result),
-        });
-      }
-
-      trace.push({ step, tool: fn.name, args, result });
-
-      messages.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        content: JSON.stringify(result),
-      });
+      const slim = slimToolResultForLlm(toolCall.name, result);
+      turn.appendToolResult(messages, toolCall, slim);
 
       await assertNotCancelled(shouldCancel);
     }
@@ -278,8 +460,33 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
     const completed = getCompletedPurchase(trace);
     if (completed) {
       const finalText = buildCompletionSummary(completed);
-      await fireEvent({ type: 'done', step, content: finalText, early_exit: true });
-      return { finalText, trace, messages, steps: step, sessionId };
+      await fireEvent({
+        type: 'done',
+        step,
+        content: finalText,
+        early_exit: true,
+        meta: { provider, model: activeModel },
+      });
+      return { finalText, trace, messages, steps: step, sessionId, provider, model: activeModel };
+    }
+  }
+
+  // Last chance: approved cart but out of iterations
+  if (FAST_FINISH) {
+    const cart = findApprovedCart(trace);
+    if (cart?.store_id && !alreadyCheckedOut(trace)) {
+      return fastFinishCheckout({
+        cart,
+        task,
+        ctx,
+        step: MAX_ITERATIONS,
+        fireEvent,
+        trace,
+        shouldCancel,
+        sessionId,
+        provider,
+        model: activeModel || 'fast-finish',
+      });
     }
   }
 
@@ -293,4 +500,9 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
   throw new Error(`Agent exceeded max iterations (${MAX_ITERATIONS})`);
 }
 
-module.exports = { runAgentLoop, MODEL_CANDIDATES, AgentCancelledError };
+module.exports = {
+  runAgentLoop,
+  AgentCancelledError,
+  isLlmConfigured,
+  resolveProvider,
+};
