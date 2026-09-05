@@ -6,6 +6,7 @@ import {
   getAgentSession,
   getLatestAgentSession,
   startSession,
+  touchSession,
 } from '../services/agentEvents';
 
 const router = Router();
@@ -33,6 +34,13 @@ const PostEventSchema = z.object({
  */
 router.post('/', validate(PostEventSchema), async (req: Request, res: Response) => {
   const body = req.body as z.infer<typeof PostEventSchema>;
+
+  // Heartbeat: refresh updated_at only (keeps stale-expiry from killing live Groq waits)
+  if (body.type === 'heartbeat') {
+    await touchSession(body.session_id);
+    res.json({ ok: true, heartbeat: true });
+    return;
+  }
 
   if (body.type === 'session_start') {
     await startSession({

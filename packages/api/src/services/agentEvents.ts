@@ -177,8 +177,9 @@ export async function forceStopSession(
 /**
  * Vercel timeouts / crashed jobs leave status=running forever.
  * Auto-close anything idle past maxAgeSeconds so Launch works again.
+ * Must be > worst-case Groq round-trip (often 30–60s) or polls will kill live runs.
  */
-export async function expireStaleRunningSessions(maxAgeSeconds = 90): Promise<void> {
+export async function expireStaleRunningSessions(maxAgeSeconds = 240): Promise<void> {
   await query(
     `UPDATE agent_sessions
      SET status = 'stopped',
@@ -199,5 +200,13 @@ export async function expireStaleRunningSessions(maxAgeSeconds = 90): Promise<vo
       ]),
       String(maxAgeSeconds),
     ]
+  );
+}
+
+/** Keep stale-expiry from killing a live Groq wait. */
+export async function touchSession(sessionId: string): Promise<void> {
+  await query(
+    `UPDATE agent_sessions SET updated_at = NOW() WHERE session_id = $1 AND status = 'running'`,
+    [sessionId]
   );
 }

@@ -6,16 +6,18 @@
 const OpenAI = require('openai');
 const { TOOL_DEFINITIONS, executeTool } = require('./tools');
 
-// Small production models only (fast + cheap on Groq developer plan)
-const MODEL_CANDIDATES = [
-  process.env.GROQ_AGENT_MODEL,
-  'llama-3.1-8b-instant',
-  'openai/gpt-oss-20b',
-].filter(Boolean);
+// Prefer the fastest Groq model; avoid slow fallbacks on Vercel (60s ceiling)
+const MODEL_CANDIDATES = process.env.VERCEL
+  ? [process.env.GROQ_AGENT_MODEL, 'llama-3.1-8b-instant'].filter(Boolean)
+  : [
+      process.env.GROQ_AGENT_MODEL,
+      'llama-3.1-8b-instant',
+      'openai/gpt-oss-20b',
+    ].filter(Boolean);
 
 // Vercel serverless has a ~60s ceiling — keep the loop short
 const MAX_ITERATIONS = Number(
-  process.env.AGENT_MAX_ITERATIONS ?? (process.env.VERCEL ? 8 : 20)
+  process.env.AGENT_MAX_ITERATIONS ?? (process.env.VERCEL ? 6 : 20)
 );
 
 function isModelNotFoundError(err) {
@@ -84,11 +86,12 @@ Hard constraints (never violate):
 - Human confirm threshold: ₹${constraints.requires_human_confirm_above_inr ?? 'none'}
 
 Critical rules:
-- After ≤2 catalog searches with any usable result under budget → IMMEDIATELY create_cart then checkout
+- After ≤2 catalog searches, pick the best in-budget hit and IMMEDIATELY create_cart then checkout
+- If a catalog search returns 0 products, try ONE different store/query — then buy or stop
 - Never invent SKUs or store IDs — only use tool results
 - Call checkout exactly ONCE
 - If policy blocks you, explain why and stop
-- Vague "surprise me" → pick any useful under-budget item from the first good catalog hit — do not browse forever`;
+- Vague "surprise me" / "going out" → pick a useful under-budget item from the first good catalog hit — do not browse forever`;
 }
 
 /** Stop once checkout succeeded and that order was status-checked. */
@@ -146,6 +149,19 @@ function truncate(value, max = 1200) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+async function withHeartbeat(sessionId, work) {
+  if (!sessionId) return work();
+  const { emitAgentEvent } = require('./agent_events');
+  const iv = setInterval(() => {
+    emitAgentEvent(sessionId, { type: 'heartbeat' }).catch(() => {});
+  }, 15000);
+  try {
+    return await work();
+  } finally {
+    clearInterval(iv);
+  }
+}
+
 async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agentId, shouldCancel }) {
   if (!process.env.GROQ_API_KEY) {
     throw new Error('GROQ_API_KEY is required. Add it to aisle/.env');
@@ -192,7 +208,7 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
     await fireEvent({ type: 'thinking', step, model: activeModel ?? MODEL_CANDIDATES[0] });
 
     await assertNotCancelled(shouldCancel);
-    const response = await getCompletion(messages);
+    const response = await withHeartbeat(sessionId, () => getCompletion(messages));
 
     const message = response.choices[0]?.message;
     if (!message) {
