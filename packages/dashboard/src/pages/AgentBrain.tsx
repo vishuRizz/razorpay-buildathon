@@ -227,6 +227,26 @@ export default function AgentBrain() {
     setLaunchError('');
     try {
       await axios.post('/v1/brain/stop', { session_id: session?.session_id });
+      // Optimistically unlock Launch even before next poll
+      setSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'stopped',
+              events: [
+                ...prev.events,
+                {
+                  id: `evt_local_stop_${Date.now()}`,
+                  timestamp: new Date().toISOString(),
+                  type: 'stopped',
+                  label: 'Agent stopped',
+                  detail: 'Stopped from dashboard. You can launch a new agent now.',
+                  status: 'error',
+                },
+              ],
+            }
+          : prev
+      );
       await fetchSession();
     } catch (err: unknown) {
       setLaunchError(
@@ -234,6 +254,10 @@ export default function AgentBrain() {
           ? String(err.response.data.detail)
           : 'Failed to stop agent'
       );
+      // Still try to unlock UI if server says nothing is running
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setSession((prev) => (prev ? { ...prev, status: 'stopped' } : prev));
+      }
     } finally {
       setStopping(false);
     }

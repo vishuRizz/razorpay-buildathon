@@ -128,9 +128,17 @@ class AgentCancelledError extends Error {
 }
 
 function assertNotCancelled(shouldCancel) {
-  if (shouldCancel?.()) {
+  const result = shouldCancel?.();
+  // Support both sync and async cancel checks (DB-backed stop on serverless)
+  if (result && typeof result.then === 'function') {
+    return result.then((cancelled) => {
+      if (cancelled) throw new AgentCancelledError();
+    });
+  }
+  if (result) {
     throw new AgentCancelledError();
   }
+  return undefined;
 }
 
 function truncate(value, max = 1200) {
@@ -179,11 +187,11 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
   }
 
   for (let step = 1; step <= MAX_ITERATIONS; step++) {
-    assertNotCancelled(shouldCancel);
+    await assertNotCancelled(shouldCancel);
 
     await fireEvent({ type: 'thinking', step, model: activeModel ?? MODEL_CANDIDATES[0] });
 
-    assertNotCancelled(shouldCancel);
+    await assertNotCancelled(shouldCancel);
     const response = await getCompletion(messages);
 
     const message = response.choices[0]?.message;
@@ -200,7 +208,7 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
     }
 
     for (const toolCall of message.tool_calls) {
-      assertNotCancelled(shouldCancel);
+      await assertNotCancelled(shouldCancel);
 
       const fn = toolCall.function;
       let args;
@@ -255,7 +263,7 @@ async function runAgentLoop({ task, token, constraints, onEvent, sessionId, agen
         content: JSON.stringify(result),
       });
 
-      assertNotCancelled(shouldCancel);
+      await assertNotCancelled(shouldCancel);
     }
 
     const completed = getCompletedPurchase(trace);

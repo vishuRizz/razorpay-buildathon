@@ -145,6 +145,7 @@ export async function getLatestAgentSession(): Promise<AgentSession | null> {
 }
 
 export async function isAnySessionRunning(): Promise<boolean> {
+  await expireStaleRunningSessions();
   const row = await queryOne<{ exists: boolean }>(
     `SELECT EXISTS(SELECT 1 FROM agent_sessions WHERE status = 'running') AS exists`
   );
@@ -152,8 +153,51 @@ export async function isAnySessionRunning(): Promise<boolean> {
 }
 
 export async function getRunningSession(): Promise<AgentSession | null> {
+  await expireStaleRunningSessions();
   const row = await queryOne<AgentSessionRow>(
     `SELECT * FROM agent_sessions WHERE status = 'running' ORDER BY updated_at DESC LIMIT 1`
   );
   return row ? rowToSession(row) : null;
+}
+
+/** Mark a session stopped immediately (so Launch is unblocked on serverless). */
+export async function forceStopSession(
+  sessionId: string,
+  detail = 'Stopped from dashboard'
+): Promise<AgentSession | null> {
+  return appendAgentEvent(sessionId, {
+    type: 'stopped',
+    label: 'Agent stopped',
+    detail,
+    status: 'error',
+    session_status: 'stopped',
+  });
+}
+
+/**
+ * Vercel timeouts / crashed jobs leave status=running forever.
+ * Auto-close anything idle past maxAgeSeconds so Launch works again.
+ */
+export async function expireStaleRunningSessions(maxAgeSeconds = 90): Promise<void> {
+  await query(
+    `UPDATE agent_sessions
+     SET status = 'stopped',
+         updated_at = NOW(),
+         events = COALESCE(events, '[]'::jsonb) || $1::jsonb
+     WHERE status = 'running'
+       AND updated_at < NOW() - ($2::text || ' seconds')::interval`,
+    [
+      JSON.stringify([
+        {
+          id: `evt_stale_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: 'stopped',
+          label: 'Agent stopped',
+          detail: `Auto-stopped: no activity for ${maxAgeSeconds}s (serverless timeout or crash)`,
+          status: 'error',
+        },
+      ]),
+      String(maxAgeSeconds),
+    ]
+  );
 }

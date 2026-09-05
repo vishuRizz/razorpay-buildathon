@@ -6,6 +6,8 @@ import { nanoid } from 'nanoid';
 import { validate } from '../middleware/validate';
 import {
   appendAgentEvent,
+  forceStopSession,
+  getAgentSession,
   getRunningSession,
   isAnySessionRunning,
   startSession,
@@ -121,7 +123,11 @@ async function runAgentJob(sessionId: string, task: string): Promise<void> {
       sessionId,
       agentId: agent_id,
       onEvent: () => {},
-      shouldCancel: () => isAgentCancelRequested(sessionId),
+      shouldCancel: async () => {
+        if (isAgentCancelRequested(sessionId)) return true;
+        const session = await getAgentSession(sessionId);
+        return !session || session.status === 'stopped' || session.status === 'error';
+      },
     });
   } catch (err: unknown) {
     const cancelled =
@@ -203,6 +209,13 @@ router.post('/stop', validate(StopAgentSchema), async (req: Request, res: Respon
   const running = await getRunningSession();
 
   if (!running) {
+    // Also allow forcing stop by session_id if status is already weird
+    if (body.session_id) {
+      await forceStopSession(body.session_id, 'Force-stopped from dashboard');
+      requestAgentCancel(body.session_id);
+      res.json({ ok: true, session_id: body.session_id, message: 'Session marked stopped.' });
+      return;
+    }
     res.status(404).json({ error: 'NOT_RUNNING', detail: 'No agent is currently running' });
     return;
   }
@@ -214,17 +227,16 @@ router.post('/stop', validate(StopAgentSchema), async (req: Request, res: Respon
 
   requestAgentCancel(running.session_id);
 
-  await appendAgentEvent(running.session_id, {
-    type: 'stop_requested',
-    label: 'Stop requested',
-    detail: 'Halting agent after current step…',
-    status: 'active',
-  });
+  // Immediately mark stopped in DB so Launch unblocks (cancel flag is in-memory per instance)
+  await forceStopSession(
+    running.session_id,
+    'Stopped from dashboard. You can launch a new agent now.'
+  );
 
   res.json({
     ok: true,
     session_id: running.session_id,
-    message: 'Stop signal sent. Agent will halt at the next checkpoint.',
+    message: 'Agent stopped. Launch is available again.',
   });
 });
 
